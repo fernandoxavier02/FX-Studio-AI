@@ -443,6 +443,22 @@ SIMPLES gets `auth` only. MEDIA gets 3. COMPLEXA gets all 7.
 
 ---
 
+## Compatibility
+
+**Built for [Claude Code](https://claude.ai/code).** The plugin uses Claude Code's plugin system — agents, skills, commands, hooks, and tool dispatch (`Task`, `AskUserQuestion`, model hints like `sonnet`/`opus`/`haiku`).
+
+The **orchestration concepts** are model-agnostic and would work with any LLM that supports tool use:
+
+| What's portable (the ideas) | What's Claude Code-specific (the glue) |
+|:---|:---|
+| Classification matrix (5 types × 3 levels) | `.claude-plugin/plugin.json` manifest |
+| Defense-in-depth gates (macro + micro) | Agent dispatch via `Task` tool |
+| Adaptive batch execution | `SKILL.md` / `commands/*.md` format |
+| Per-batch adversarial review with fix cap | `model: sonnet \| opus \| haiku` hints |
+| Proportionality, non-invention, TDD | `hooks.json` session hooks |
+
+Porting to Cursor, Windsurf, Codex, or other AI coding tools means adapting the integration layer — the pipeline logic stays the same. And since it's all pure markdown (zero runtime), migration cost is low.
+
 ## Requirements
 
 - [Claude Code](https://claude.ai/code) CLI
