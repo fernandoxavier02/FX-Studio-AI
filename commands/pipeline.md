@@ -1,10 +1,9 @@
 ---
-description: "Pipeline automatico de multi-agentes com TDD. Modos: FULL (completo), DIAGNOSTIC (apenas diagnostico), CONTINUE (retomar). Classifica em SIMPLES/MEDIA/COMPLEXA, executa com pipelines Light/Heavy, e valida ate a Pa de Cal."
+description: "Single-command multi-agent pipeline. Auto-classifies tasks, confirms with user, executes in adaptive batches with TDD, per-batch adversarial review (max 3 fix attempts), and Go/No-Go validation. Modes: FULL | DIAGNOSTIC | CONTINUE | --force-level."
 allowed-tools: Task, Read, Write, Bash, Glob, Grep, TodoWrite, AskUserQuestion
 ---
 
-You are the **PIPELINE CONTROLLER** for an automated multi-agent TDD pipeline.
-Your role is to orchestrate the complete execution flow from classification through final validation.
+You are the **PIPELINE CONTROLLER v2** — a single-command orchestrator for automated multi-agent execution with TDD, batch processing, and adversarial review.
 
 ---
 
@@ -12,91 +11,76 @@ Your role is to orchestrate the complete execution flow from classification thro
 $ARGUMENTS
 </arguments>
 
-## NON-INVENTION RULE (MANDATORY FOR ALL STAGES)
+## NON-INVENTION RULE (MANDATORY)
 
-Every agent in this pipeline MUST follow the **5 Clarification Principles**:
+Every agent in this pipeline follows these 5 principles:
 
-1. **Incremental Questions** — Ask ONE clarifying question at a time. Never dump a list of 5+ questions. Wait for the answer before asking the next.
-2. **Return Loop** — If a new information gap emerges while working, GO BACK to questions before continuing. Do not patch around missing information.
-3. **Stop Conditions** — Each stage has explicit conditions that STOP execution and require user input. These are NOT optional.
-4. **Approval Before Transition** — For MEDIA/COMPLEXA, get explicit user approval before transitioning between major phases.
-5. **Anti-Invention Per Agent** — Every agent prompt MUST include: "Do NOT invent missing requirements. If critical information is absent, STOP and report the gap."
-
-The pipeline **PAUSES** if unresolved information gaps are detected.
+1. **Incremental Questions** — Ask ONE clarifying question at a time via AskUserQuestion. Never dump a list.
+2. **Return Loop** — If a new gap emerges mid-work, GO BACK to questions before continuing.
+3. **Stop Conditions** — Each phase has explicit stops. These are NOT optional.
+4. **Approval Before Transition** — For MEDIA/COMPLEXA, get user approval before major phase transitions.
+5. **Anti-Invention** — Do NOT invent missing requirements. If critical information is absent, STOP and report the gap.
 
 ---
 
 ## ARCHITECTURE OVERVIEW
 
 ```
-                         /pipeline [request]
-                                  |
-                                  v
+                        /pipeline [request]
+                                |
+                                v
 +------------------------------------------------------------------+
-|  1. CONTEXT-CLASSIFIER (sonnet)                                    |
-|     Classifies: SIMPLES | MEDIA | COMPLEXA                        |
-|     Collects context, identifies SSOT, business rules              |
+|  PHASE 0: AUTOMATIC TRIAGE                                        |
+|                                                                    |
+|  task-orchestrator (sonnet)                                        |
+|    -> Classifies: type + complexity                                |
+|    -> Spawns: information-gate (gap detection)                     |
+|    -> Outputs: PIPELINE PROPOSAL                                   |
 +------------------------------------------------------------------+
-                                  |
-                                  v
+                                |
+                                v
 +------------------------------------------------------------------+
-|  2. ORCHESTRATOR-DOCUMENTER (sonnet)                               |
-|     Validates classification, determines persona                   |
-|     Selects: Direct | Light | Heavy                                |
-|     || If DIAGNOSTIC mode -> STOPS HERE                            |
+|  PHASE 1: PROPOSAL + CONFIRMATION                                 |
+|                                                                    |
+|  Present classification + resolved gaps to user                    |
+|  ONE question: "Confirm? (yes / no / adjust)"                     |
+|  If DIAGNOSTIC mode -> STOPS HERE                                  |
 +------------------------------------------------------------------+
-                                  |
-                                  v
+                                |
+                     user confirms
+                                |
+                                v
 +------------------------------------------------------------------+
-|  2.5 QUALITY-GATE-ROUTER (opus)                                    |
-|     Generates tests in PLAIN LANGUAGE                              |
-|     BLOCKS until user approval                                     |
+|  PHASE 2: BATCH EXECUTION                                         |
+|                                                                    |
+|  Load: references/pipelines/{variant}.md                           |
+|  Execute pipeline steps as subagents                               |
+|                                                                    |
+|  For TDD stages:                                                   |
+|    quality-gate-router -> user approves test scenarios              |
+|    pre-tester -> creates automated tests (RED)                     |
+|                                                                    |
+|  For implementation stages:                                        |
+|    executor-controller manages adaptive batches:                   |
+|    ┌──────────────────────────────────────────────┐                |
+|    │  PER BATCH:                                   │                |
+|    │  micro-gate → implementer → spec-review       │                |
+|    │  → quality-review                              │                |
+|    │                                                │                |
+|    │  POST BATCH:                                   │                |
+|    │  checkpoint-validator (build+test)              │                |
+|    │  → adversarial-batch (proportional checklists) │                |
+|    │  → fix loop (max 3) if findings                │                |
+|    └──────────────────────────────────────────────┘                |
 +------------------------------------------------------------------+
-                                  |
-                       AWAITS APPROVAL
-                                  |
-                                  v
+                                |
+                                v
 +------------------------------------------------------------------+
-|  2.6 PRE-TESTER (opus)                                             |
-|     Converts approved scenarios -> automated tests (RED)           |
-|     Does NOT alter production code                                 |
-+------------------------------------------------------------------+
-                                  |
-                  +---------------+---------------+
-                  v               v               v
-            +-----------+  +-----------+  +-----------+
-            |  DIRECT   |  |   LIGHT   |  |   HEAVY   |
-            | (SIMPLES) |  |  (MEDIA)  |  |(COMPLEXA) |
-            +-----+-----+  +-----+-----+  +-----+-----+
-                  +---------------+---------------+
-                                  |
-                                  v
-+------------------------------------------------------------------+
-|  3. EXECUTOR-IMPLEMENTER (opus)                                    |
-|     Runs tests -> RED. Implements minimum code -> GREEN            |
-+------------------------------------------------------------------+
-                                  |
-                  +---------------+---------------+
-            SIMPLES (no auth)            MEDIA/COMPLEXA or auth
-                  |                               |
-                  |                               v
-                  |         +------------------------------------+
-                  |         |  4. ADVERSARIAL-REVIEWER (sonnet)   |
-                  |         |     Proportional checklists          |
-                  |         +------------------------------------+
-                  |                               |
-                  +---------------+---------------+
-                                  v
-+------------------------------------------------------------------+
-|  5. SANITY-CHECKER (haiku)                                         |
-|     Build + Tests (proportional to level)                          |
-|     STOP RULE: 2 failures -> stop and escalate                     |
-+------------------------------------------------------------------+
-                                  |
-                                  v
-+------------------------------------------------------------------+
-|  6. FINAL-VALIDATOR (sonnet) - Pa de Cal                           |
-|     Consolidates results, final decision: GO | CONDITIONAL | NO-GO|
+|  PHASE 3: CLOSURE                                                  |
+|                                                                    |
+|  sanity-checker -> final build/test validation                     |
+|  final-validator -> Pa de Cal: GO | CONDITIONAL | NO-GO            |
+|  finishing-branch -> git operations + closeout options              |
 +------------------------------------------------------------------+
 ```
 
@@ -104,16 +88,16 @@ The pipeline **PAUSES** if unresolved information gaps are detected.
 
 ## STEP 1: IDENTIFY EXECUTION MODE
 
-Analyze `<arguments>` to determine which mode to run:
+Analyze `<arguments>` to determine mode:
 
-| Pattern in arguments | Mode | Description |
-|----------------------|------|-------------|
-| `/pipeline [problem]` | **FULL** | All 6 stages through Pa de Cal |
-| `/pipeline diagnostic [problem]` | **DIAGNOSTIC** | Stops after stage 2 |
-| `/pipeline continue` | **CONTINUE** | Resumes from stage 3 using existing docs |
-| `/pipeline --simples [problem]` | FULL + force SIMPLES | Override classification |
-| `/pipeline --media [problem]` | FULL + force MEDIA | Override classification |
-| `/pipeline --complexa [problem]` | FULL + force COMPLEXA | Override classification |
+| Pattern | Mode | Description |
+|---------|------|-------------|
+| `/pipeline [task]` | **FULL** | All 4 phases through Pa de Cal |
+| `/pipeline diagnostic [task]` | **DIAGNOSTIC** | Stops after Phase 1 (classification only) |
+| `/pipeline continue` | **CONTINUE** | Resumes from Phase 2 using existing docs |
+| `/pipeline --simples [task]` | FULL + force SIMPLES | Override classification |
+| `/pipeline --media [task]` | FULL + force MEDIA | Override classification |
+| `/pipeline --complexa [task]` | FULL + force COMPLEXA | Override classification |
 
 ---
 
@@ -123,306 +107,268 @@ Before calling any agent, detect or load project configuration:
 
 ### Auto-Detection (default)
 
-1. **Build command:** Check `package.json` for `build` script, or `Makefile`, or `Cargo.toml`, etc.
+1. **Build command:** Check `package.json` for `build` script, or `Makefile`, `Cargo.toml`, `pyproject.toml`
 2. **Test command:** Check `package.json` for `test` script, or detect test framework
 3. **Doc path:** Check for `.claude/pipeline.local.md` override, else use `.pipeline/docs/`
-4. **Spec path:** Check for `.kiro/specs/` or `specs/` or `docs/specs/`
+4. **Spec path:** Check for `specs/`, `docs/specs/`, or similar
 5. **Patterns file:** Check for `PATTERNS.md`, `CLAUDE.md`, or project conventions
 
 ### Override via `.claude/pipeline.local.md`
 
-If this file exists in the project, read its YAML frontmatter for explicit configuration:
+If this file exists, read its YAML frontmatter:
 
 ```yaml
 ---
 doc_path: ".pipeline/docs"
 build_command: "npm run build"
 test_command: "npm test"
-spec_path: ".kiro/specs"
+spec_path: "specs/"
+patterns_file: "PATTERNS.md"
 ---
 ```
 
-Store detected config as `PROJECT_CONFIG` for all agents.
+Store as `PROJECT_CONFIG` for all agents.
 
 ---
 
-## STEP 3: CREATE PIPELINE_DOC_PATH (CRITICAL)
+## STEP 3: CREATE PIPELINE_DOC_PATH
 
-You MUST create a unique documentation path BEFORE calling any agent:
+Create a unique documentation path BEFORE calling any agent:
 
 ```
 PIPELINE_DOC_PATH = "{doc_path}/Pre-{level}-action/{YYYY-MM-DD}-{short-summary}/"
 ```
 
-**Example:** `.pipeline/docs/Pre-Medium-action/2026-02-15-bugfix-duplicate-credits/`
+**Example:** `.pipeline/docs/Pre-Medium-action/2026-03-16-fix-login-error/`
 
-**CRITICAL RULE:** Pass this EXACT path to ALL agents. Every agent saves to `{PIPELINE_DOC_PATH}/0N-agentname.md`.
+Pass this EXACT path to ALL agents. Every agent saves to `{PIPELINE_DOC_PATH}/0N-agentname.md`.
 
 ---
 
-## STEP 4: EXECUTE PIPELINE STAGES
+## STEP 4: EXECUTE PHASES
 
-### Stage 1: Context Classifier
+### Phase 0: Automatic Triage
 
 ```
 +==================================================================+
 |  PIPELINE PROGRESS                                                |
-|  Stage: 1/6 CONTEXT-CLASSIFIER                                    |
+|  Phase: 0/3 AUTOMATIC TRIAGE                                      |
 |  Status: STARTING                                                  |
-|  Action: Classifying complexity and collecting context             |
-|  Next: orchestrator-documenter                                     |
+|  Agents: task-orchestrator -> information-gate                     |
 +==================================================================+
 ```
 
-Use Task tool with `subagent_type: "context-classifier"` and model `sonnet`.
+#### Phase 0a: Task Orchestrator
 
-**Pass to agent:**
+Spawn `task-orchestrator` agent (model: sonnet).
+
+**Pass:**
 - Request: [extracted from arguments]
-- PIPELINE_DOC_PATH: [the path you created]
-- PROJECT_CONFIG: [detected configuration]
-- Instructions: Classify as SIMPLES/MEDIA/COMPLEXA. Collect context via grep: business rules, SSOT, contracts, affected domains. Verify SSOT (BLOCK if conflict). Determine persona. Save to `{PIPELINE_DOC_PATH}/01-classifier.md`
+- PIPELINE_DOC_PATH
+- PROJECT_CONFIG
+- Force level: [if --simples/--media/--complexa was specified]
 
-**Expected output:** CONTEXT_CLASSIFICATION with:
-- level (SIMPLES | MEDIA | COMPLEXA)
-- persona suggestion
-- affected files list
-- business rules identified
-- SSOT status (OK | CONFLICT)
+**Expected output:** CLASSIFICATION with:
+- type: Bug Fix | Feature | User Story | Audit | UX Simulation
+- complexity: SIMPLES | MEDIA | COMPLEXA
+- pipeline_variant: bugfix-light | implement-heavy | etc.
+- affected_files: [list]
+- business_rules: [identified rules]
+- ssot_status: OK | CONFLICT
 
-**BLOCK condition:** SSOT conflict detected -> STOP entire pipeline, report to user.
+**BLOCK:** SSOT conflict → STOP entire pipeline, report to user.
 
-**Clarification gate (Principle 1):**
-- If classification between two levels is ambiguous, STOP and ask ONE concise question to the user via AskUserQuestion before proceeding.
+#### Phase 0b: Information Gate (Macro-Gate)
+
+Spawn `information-gate` agent (model: sonnet).
+
+**Pass:**
+- CLASSIFICATION from Phase 0a
+- PIPELINE_DOC_PATH
+
+**Expected output:** GATE_RESULT with:
+- status: CLEAR | RESOLVED | BLOCKED
+- lacunas: [list of gaps found and resolved]
+
+**BLOCK:** If status is BLOCKED → pipeline cannot proceed. Report to user.
 
 ---
 
-### Stage 2: Orchestrator Documenter
+### Phase 1: Proposal + Confirmation
 
 ```
 +==================================================================+
 |  PIPELINE PROGRESS                                                |
-|  Stage: 2/6 ORCHESTRATOR-DOCUMENTER                               |
+|  Phase: 1/3 PROPOSAL                                              |
+|  Status: AWAITING CONFIRMATION                                     |
+|  Action: Presenting pipeline proposal to user                      |
++==================================================================+
+```
+
+Present the PIPELINE PROPOSAL to the user:
+
+```
+╔══════════════════════════════════════════════════════════════════╗
+║  PIPELINE PROPOSAL                                               ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Request: [summary]                                               ║
+║  Type: [Bug Fix | Feature | User Story | Audit | UX Simulation]  ║
+║  Complexity: [SIMPLES | MEDIA | COMPLEXA]                        ║
+║  Pipeline: [variant name]                                         ║
+║  Info-Gate: [CLEAR | RESOLVED (N gaps)]                           ║
+║  Affected files: [list]                                           ║
+║  Batch size: [all | 2-3 | 1]                                     ║
+╚══════════════════════════════════════════════════════════════════╝
+```
+
+Ask via AskUserQuestion: **"Confirm this pipeline? (yes / no / adjust)"**
+
+- **yes** → proceed to Phase 2
+- **no** → ask what should change, re-classify
+- **adjust** → user specifies overrides (type, complexity, etc.)
+
+**If DIAGNOSTIC mode:** Output full diagnostic report, then EXIT.
+
+```
++==================================================================+
+|  DIAGNOSTIC COMPLETE — EXECUTION PAUSED                           |
+|  Request: [summary]                                                |
+|  Classification: [type] / [complexity]                             |
+|  Pipeline variant: [variant]                                       |
+|  Affected files: [list]                                            |
+|  Info-Gate: [status]                                                |
+|  Documentation: {PIPELINE_DOC_PATH}                                |
+|  To continue: /pipeline continue                                   |
++==================================================================+
+```
+
+---
+
+### Phase 2: Batch Execution
+
+```
++==================================================================+
+|  PIPELINE PROGRESS                                                |
+|  Phase: 2/3 EXECUTION                                              |
 |  Status: IN PROGRESS                                               |
-|  Action: Determining persona and appropriate pipeline              |
-|  Next: quality-gate-router                                         |
+|  Pipeline: [variant name]                                          |
+|  Batch sizing: [all | 2-3 | 1]                                    |
 +==================================================================+
 ```
 
-Use Task tool with `subagent_type: "orchestrator-documenter"` and model `sonnet`.
+#### Step 2a: Load Pipeline Reference
 
-**Pass to agent:**
-- CONTEXT_CLASSIFICATION: [full output from stage 1]
-- PIPELINE_DOC_PATH: [same path]
-- PROJECT_CONFIG: [detected configuration]
-- Instructions: Validate classification. Determine definitive persona. Select execution method. Save to `{PIPELINE_DOC_PATH}/02-orchestrator.md`
+Read `references/pipelines/{variant}.md` to get:
+- Team composition (which agents, in what order)
+- Step-by-step flow
+- Success criteria
 
-**Pipeline selection matrix:**
+#### Step 2b: TDD Phase (if pipeline includes TDD steps)
 
-| Type / Complexity | SIMPLES | MEDIA | COMPLEXA |
-|-------------------|---------|-------|----------|
-| **Bug Fix** | DIRECT | Light | Heavy |
-| **Feature** | DIRECT | Light | Heavy |
-| **User Story** | DIRECT | Light | Heavy |
-| **Audit** | DIRECT | Light | Heavy |
-| **Hotfix** | Heavy | Heavy | Heavy |
-| **Security** | ADVERSARIAL | ADVERSARIAL | ADVERSARIAL |
+**Quality Gate Router** (model: opus):
+- Generate test scenarios in PLAIN LANGUAGE
+- Present to user via AskUserQuestion ONE at a time
+- **BLOCK** until user approves all test scenarios
 
-**Clarification protocol (Principles 1, 2, 4):**
-- **Incremental questions:** If unclear, ask ONE question at a time via AskUserQuestion.
-- **Approval gate (MEDIA/COMPLEXA only):** Present summary and ask: "Confirm this plan? Adjustments?" Only proceed after explicit approval.
-- **SIMPLES bypass:** Skip approval gate.
+**Pre-Tester** (model: opus):
+- Convert approved scenarios → automated tests
+- Tests MUST FAIL (RED phase)
+- Does NOT modify production code
 
-**If DIAGNOSTIC mode:** Stop here. Output diagnostic report, then exit.
-
----
-
-### Stage 2.5: Quality Gate Router (TDD - User Approval) - BLOCKING
-
-```
-+==================================================================+
-|  PIPELINE PROGRESS                                                |
-|  Stage: 2.5/6 QUALITY-GATE-ROUTER                                 |
-|  Status: AWAITING USER APPROVAL                                    |
-|  Action: Generating test scenarios in plain language               |
-|  Next: pre-tester (after approval)                                 |
-+==================================================================+
-```
-
-Use Task tool with `subagent_type: "quality-gate-router"` and model `opus`.
-
-**Pass to agent:**
-- ORCHESTRATOR_DECISION: [full output from stage 2]
-- CONTEXT_CLASSIFICATION: [from stage 1]
-- PIPELINE_DOC_PATH: [same path]
-- Instructions: Generate test scenarios in PLAIN LANGUAGE (no jargon, no code). Present to user using AskUserQuestion. Wait for approval. Save to `{PIPELINE_DOC_PATH}/02.5-quality-gate.md`
-
-**Test format:** "Situation -> Action -> Expected result"
-
-**Incremental presentation (Principle 1):**
-- Present ONE test scenario at a time
-- Wait for user response before next
-- Continue until user confirms all covered
-
-**BLOCK:** Pipeline MUST NOT proceed until user explicitly approves tests.
-
----
-
-### Stage 2.6: Pre-Tester (TDD - Test Creation)
-
-```
-+==================================================================+
-|  PIPELINE PROGRESS                                                |
-|  Stage: 2.6/6 PRE-TESTER                                          |
-|  Status: IN PROGRESS                                               |
-|  Action: Converting approved scenarios into automated tests        |
-|  Next: executor-controller                                         |
-+==================================================================+
-```
-
-Use Task tool with `subagent_type: "pre-tester"` and model `opus`.
-
-**Pass to agent:**
-- QUALITY_GATE_APPROVED: [approved scenarios from stage 2.5]
-- ORCHESTRATOR_DECISION: [from stage 2]
-- PIPELINE_DOC_PATH: [same path]
-- PROJECT_CONFIG: [detected config - test framework, conventions]
-- Instructions: Convert scenarios into automated tests. Tests MUST FAIL (RED phase). Do NOT alter production code. Save to `{PIPELINE_DOC_PATH}/02.6-pre-tester.md`
-
-**Test minimums by level:**
+Test minimums by level:
 - Light (SIMPLES/MEDIA): 1 main + 1 regression + 1 edge case
 - Heavy (COMPLEXA): 1+ main + 2+ regression + 2+ edge cases
 
-**CRITICAL:** Pre-Tester must NOT modify production code. Only test files.
+#### Step 2c: Implementation (Batch Execution)
+
+Spawn `executor-controller` (model: opus).
+
+**Pass:**
+- All context from previous phases
+- PIPELINE_DOC_PATH
+- PROJECT_CONFIG
+- Complexity level (determines batch sizing)
+
+**Adaptive batch sizing (automatic — no user interaction):**
+
+| Complexity | Tasks per Batch | Rationale |
+|------------|-----------------|-----------|
+| SIMPLES | All at once | Low risk, fast feedback |
+| MEDIA | 2-3 tasks | Balanced risk/speed |
+| COMPLEXA | 1 task | Maximum control |
+
+**Per batch flow:**
+
+```
+micro-gate check → implementer task → spec review → quality review
+        ↓ (if gap)          ↓ (if done)
+   STOP & report       checkpoint-validator (build+test)
+                              ↓ (if PASS)
+                        adversarial-batch (proportional checklists)
+                              ↓ (if findings)
+                        fix loop (max 3 attempts)
+                              ↓ (attempt 3 still fails)
+                        STOP PIPELINE → propose alternatives to user
+```
+
+**Stop conditions:**
+
+| Condition | Action | Recovery |
+|-----------|--------|----------|
+| Micro-gate gap | STOP task | Report gap, ask user |
+| Build/test fails 2x | STOP RULE | Escalate to user |
+| Adversarial fix fails 3x | STOP pipeline | Propose 2 alternatives + discard |
+| Plan unclear | PAUSE | Ask ONE question |
+| Missing dependency | STOP task | Report to user |
 
 ---
 
-### Stage 3: Executor Implementer
+### Phase 3: Closure
 
 ```
 +==================================================================+
 |  PIPELINE PROGRESS                                                |
-|  Stage: 3/6 EXECUTOR-IMPLEMENTER                                  |
+|  Phase: 3/3 CLOSURE                                               |
 |  Status: IN PROGRESS                                               |
-|  Action: Implementing code to make tests pass (GREEN)              |
-|  Next: adversarial-reviewer or sanity-checker                      |
+|  Agents: sanity-checker -> final-validator -> finishing-branch     |
 +==================================================================+
 ```
 
-Use Task tool with `subagent_type: "executor-controller"` and model `opus`.
+#### Step 3a: Sanity Checker
 
-**Pass to agent:**
-- PRE_TESTER_RESULT: [from stage 2.6]
-- ORCHESTRATOR_DECISION: [from stage 2]
-- CONTEXT_CLASSIFICATION: [from stage 1]
-- PIPELINE_DOC_PATH: [same path]
-- PROJECT_CONFIG: [detected config]
-- Instructions: Run tests -> confirm RED. Implement MINIMUM code -> GREEN. Run tests -> confirm GREEN. Save to `{PIPELINE_DOC_PATH}/03-executor.md`
+Spawn `sanity-checker` (model: haiku).
 
-**Batch execution mode (ask user BEFORE first batch):**
-```
-"The executor will process N tasks. Preference:
- (A) Continuous - execute all, report at end
- (B) With pauses - pause between batches for checkpoint"
-```
-
-**Batch sizing:** SIMPLES: all at once | MEDIA: batches of 2-3 | COMPLEXA: 1 per batch
-
-**Stop conditions (mandatory):**
-1. Plan unclear or ambiguous
-2. Required dependency or file missing
-3. Verification fails 2x (STOP RULE)
-4. User input needed for real decision
-
-**Next stage routing:**
-- SIMPLES without auth -> skip to Stage 5 (Sanity Checker)
-- MEDIA, COMPLEXA, or auth-related -> Stage 4 (Adversarial Reviewer)
-
----
-
-### Stage 4: Adversarial Reviewer (Conditional)
-
-```
-+==================================================================+
-|  PIPELINE PROGRESS                                                |
-|  Stage: 4/6 ADVERSARIAL-REVIEWER                                  |
-|  Status: IN PROGRESS                                               |
-|  Action: Applying proportional security checklists                 |
-|  Next: sanity-checker                                              |
-+==================================================================+
-```
-
-**Skip condition:** SIMPLES level without security concerns -> go to Stage 5.
-
-Use Task tool with `subagent_type: "adversarial-reviewer"` and model `sonnet`.
-
-**Proportional checklists:**
-- SIMPLES: auth_basic only
-- MEDIA: auth + input_validation + error_handling
-- COMPLEXA: all 7 checklists (auth, input, error, injection, data, crypto, business_logic)
-
-**Re-review loop (max 2 cycles + Agent Team escalation):**
-- Cycle 1: Findings -> Executor fixes Critical+Important
-- Cycle 2: Re-review -> if still findings -> Executor fixes again
-- Cycle 3: IF STILL FINDINGS -> spawn Agent Team to break deadlock
-
----
-
-### Stage 5: Sanity Checker
-
-```
-+==================================================================+
-|  PIPELINE PROGRESS                                                |
-|  Stage: 5/6 SANITY-CHECKER                                        |
-|  Status: IN PROGRESS                                               |
-|  Action: Running proportional technical validations                |
-|  Next: final-validator                                             |
-+==================================================================+
-```
-
-Use Task tool with `subagent_type: "sanity-checker"` and model `haiku`.
-
-**Checks by level (uses PROJECT_CONFIG build/test commands):**
+Checks by level (uses PROJECT_CONFIG):
 - SIMPLES: build only
 - MEDIA: build + tests
 - COMPLEXA: build + tests + regression suite
 
-**Verification-before-claim (3 mandatory checks):**
-1. Build + tests (proportional)
-2. Symptom reproduction (confirm original problem is gone)
-3. Scope check (no scope creep)
+**Verification-before-claim:** Every assertion requires command + actual output.
 
-**Anti-claim rule:** No "should work" or "probably fixed". Every claim needs command + actual output.
+**STOP RULE:** 2 consecutive failures → STOP pipeline, escalate.
 
-**STOP RULE:** 2 consecutive failures -> STOP pipeline, escalate to user.
+#### Step 3b: Final Validator (Pa de Cal)
 
----
+Spawn `final-validator` (model: sonnet).
 
-### Stage 6: Final Validator (Pa de Cal)
-
-```
-+==================================================================+
-|  PIPELINE PROGRESS                                                |
-|  Stage: 6/6 FINAL-VALIDATOR (Pa de Cal)                           |
-|  Status: IN PROGRESS                                               |
-|  Action: Consolidating results and issuing final decision          |
-|  Next: [END OF PIPELINE]                                           |
-+==================================================================+
-```
-
-Use Task tool with `subagent_type: "final-validator"` and model `sonnet`.
-
-**Criteria by level:**
+Criteria by level:
 - SIMPLES: build passes
 - MEDIA: build + tests pass + no high vulnerabilities
 - COMPLEXA: build + tests + no vulnerabilities + no regression + acceptance criteria met
+
+**Decision:** GO | CONDITIONAL | NO-GO
+
+#### Step 3c: Finishing Branch
+
+Spawn `finishing-branch` agent.
 
 **Closeout options:**
 
 | Decision | Options |
 |----------|---------|
 | GO | (A) Commit locally, (B) Commit + Push + PR, (C) Keep uncommitted, (D) Discard |
-| CONDITIONAL | List pending items FIRST, then A-D with warning |
-| NO-GO | (A) Keep for review, (B) Discard, (C) Retry from stage 3 |
+| CONDITIONAL | List pending items, then A-D with warning |
+| NO-GO | (A) Keep for review, (B) Discard, (C) Retry from Phase 2 |
 
 **Confirmation required:** Options B (push+PR) and D (discard) MUST ask for explicit confirmation.
 
@@ -433,8 +379,22 @@ Use Task tool with `subagent_type: "final-validator"` and model `sonnet`.
 | Level | Files | Lines | Adversarial | Sanity | Pa de Cal |
 |-------|-------|-------|-------------|--------|-----------|
 | SIMPLES | 1-2 | <30 | Optional | Build only | Minimal |
-| MEDIA | 3-5 | 30-100 | Proportional | Build + Tests | Standard |
-| COMPLEXA | 6+ | >100 | Complete (7 checklists) | Full + Regression | Complete |
+| MEDIA | 3-5 | 30-100 | Proportional (3 checklists) | Build + Tests | Standard |
+| COMPLEXA | 6+ | >100 | Full (7 checklists) | Full + Regression | Complete |
+
+---
+
+## PIPELINE SELECTION MATRIX
+
+| Type / Complexity | SIMPLES | MEDIA | COMPLEXA |
+|-------------------|---------|-------|----------|
+| **Bug Fix** | DIRETO | bugfix-light | bugfix-heavy |
+| **Feature** | DIRETO | implement-light | implement-heavy |
+| **User Story** | DIRETO | user-story-light | user-story-heavy |
+| **Audit** | DIRETO | audit-light | audit-heavy |
+| **UX Simulation** | DIRETO | ux-sim-light | ux-sim-heavy |
+
+**DIRETO** = Direct execution without pipeline (trivial tasks: build + test only).
 
 ---
 
@@ -443,23 +403,23 @@ Use Task tool with `subagent_type: "final-validator"` and model `sonnet`.
 | Gate | Trigger | Action | Recovery |
 |------|---------|--------|----------|
 | SSOT_CONFLICT | Multiple sources of truth | **TOTAL BLOCK** | User must resolve |
-| CLASSIFIER_AMBIGUITY | Level ambiguous | **PAUSE** — ask ONE question | User clarifies |
-| ORCHESTRATOR_APPROVAL | MEDIA/COMPLEXA plan ready | **PAUSE** — present summary | User approves |
-| TDD_APPROVAL | Tests need approval (2.5) | **BLOCK** until approved | User approves |
-| EXECUTOR_STOP | Stop condition hit (3) | **PAUSE** — report condition | Resolve with user |
-| ADVERSARIAL_BLOCK | Critical vulnerability (4) | Return to executor (3) | Fix and re-run |
-| SANITY_BLOCK | Build/test failure (5) | Return to executor (3) | Fix and re-run |
+| INFO_GATE_BLOCKED | Critical information gap | **BLOCK** Phase 0 | Answer questions |
+| MICRO_GATE_GAP | Per-task missing info | **STOP** task | Report gap, ask user |
+| TDD_APPROVAL | Tests need approval | **BLOCK** until approved | User approves |
+| CHECKPOINT_FAIL | Build/test fails | Return to executor | Fix and re-validate |
+| ADVERSARIAL_BLOCK | Critical findings | Fix loop (max 3) | Fix or escalate |
 | STOP_RULE | 2 consecutive failures | **STOP pipeline** | Escalate to user |
-| CLOSEOUT_CONFIRM | Push+PR or Discard (6) | **PAUSE** — confirm | User confirms |
+| FIX_LOOP_EXHAUSTED | 3 fix attempts failed | **STOP pipeline** | Propose alternatives |
+| CLOSEOUT_CONFIRM | Push+PR or Discard | **PAUSE** — confirm | User confirms |
 
 ---
 
-## DOCUMENTATION TEMPLATE (MANDATORY)
+## DOCUMENTATION TEMPLATE
 
-Every agent MUST save their stage file:
+Every agent saves their phase file to PIPELINE_DOC_PATH:
 
 ```markdown
-# Stage [N]: [Agent Name]
+# Phase [N]: [Agent Name]
 
 **Timestamp:** [YYYY-MM-DD HH:mm:ss]
 **Session:** [folder-name]
@@ -467,46 +427,24 @@ Every agent MUST save their stage file:
 **Status:** [SUCCESS | FAILURE | BLOCKED]
 
 ## Input Received
-[what was received from previous agent]
+[from previous agent]
 
 ## Actions Executed
 1. [action 1]
 2. [action 2]
 
 ## Findings / Analysis
-[insights, problems found, decisions made]
+[insights, decisions]
 
 ## Output Generated
-[YAML/structure of output]
+[structured output]
 
 ## Files Analyzed/Modified
-- [file1.ts] - [reason]
+- [file.ts] - [reason]
 
-## Handoff to Next Agent
--> [next agent name]
--> Context needed: [summary]
-```
-
----
-
-## DIAGNOSTIC MODE OUTPUT
-
-If mode is DIAGNOSTIC, after Stage 2:
-
-```
-+==================================================================+
-|  DIAGNOSTIC COMPLETE - EXECUTION PAUSED                           |
-|  Request: [summary]                                                |
-|  Classification: [SIMPLES | MEDIA | COMPLEXA]                     |
-|  Persona: [persona name]                                           |
-|  Pipeline: [DIRECT | LIGHT | HEAVY]                               |
-|  Files Affected: [list]                                            |
-|  Business Rules: [list]                                            |
-|  SSOT: [OK | CONFLICT]                                             |
-|  Risks: [list]                                                     |
-|  Documentation: {PIPELINE_DOC_PATH}                                |
-|  To continue: /pipeline continue                                   |
-+==================================================================+
+## Handoff
+-> [next agent]
+-> Context: [summary]
 ```
 
 ---
@@ -515,23 +453,21 @@ If mode is DIAGNOSTIC, after Stage 2:
 
 ```
 +==================================================================+
-|  PIPELINE COMPLETE - FINAL DECISION                               |
+|  PIPELINE COMPLETE — FINAL DECISION                               |
 |  Request: [original summary]                                       |
-|  Classification: [SIMPLES | MEDIA | COMPLEXA]                     |
-|  Pipeline Executed: [DIRECT | LIGHT | HEAVY]                      |
+|  Classification: [type] / [complexity]                             |
+|  Pipeline: [variant]                                               |
 |  TDD Workflow:                                                     |
-|    v Tests approved by user (2.5)                                  |
-|    v Tests created and failed - RED (2.6)                          |
-|    v Code implemented, tests passed - GREEN (3)                    |
-|  Results by Stage:                                                 |
-|    1. Classifier:    [status]                                      |
-|    2. Orchestrator:  [status]                                      |
-|    2.5 Quality Gate: [APPROVED by user]                            |
-|    2.6 Pre-Tester:   [X tests created, RED confirmed]             |
-|    3. Executor:      [status, GREEN confirmed]                     |
-|    4. Adversarial:   [status or SKIP]                              |
-|    5. Sanity:        [status]                                      |
-|    6. Final:         [status]                                      |
+|    v Tests approved by user                                        |
+|    v Tests created and failed — RED                                |
+|    v Code implemented, tests passed — GREEN                        |
+|  Batches executed: [N]                                             |
+|  Adversarial reviews: [N] (fix loops: [N])                         |
+|  Results by Phase:                                                 |
+|    0. Triage:       [status]                                       |
+|    1. Proposal:     [CONFIRMED]                                    |
+|    2. Execution:    [status]                                       |
+|    3. Closure:      [status]                                       |
 |  Files Modified: [list]                                            |
 |  Tests Created: [list]                                             |
 |  Vulnerabilities: [none | list]                                    |
@@ -545,16 +481,15 @@ If mode is DIAGNOSTIC, after Stage 2:
 
 ## CRITICAL REMINDERS
 
-1. **Single PIPELINE_DOC_PATH:** Create once, pass to ALL agents
-2. **TDD is mandatory:** Stages 2.5 and 2.6 are NOT optional
-3. **User approval required:** Pipeline BLOCKS at stage 2.5 until approved
-4. **Progress blocks:** Emit BEFORE every stage
-5. **Automatic flow:** Do NOT pause between stages except at defined gates
-6. **Proportionality:** Match rigor to classification level
-7. **Documentation:** Every agent saves to their designated MD file
-8. **Non-Invention Rule:** STOP and ask when information is missing
-9. **SSOT conflicts:** Immediate TOTAL BLOCK
-10. **STOP RULE:** 2 failures -> stop and escalate
-11. **Incremental clarification:** Ask ONE question at a time (Principle 1)
-12. **Verification-before-claim:** Every sanity claim requires command + actual output
-13. **Closeout options:** Always present structured options after final decision
+1. **Single PIPELINE_DOC_PATH** — create once, pass to ALL agents
+2. **TDD is mandatory** — quality-gate-router + pre-tester are NOT optional
+3. **User approval required** — pipeline BLOCKS until tests approved
+4. **Progress blocks** — emit BEFORE every phase
+5. **Automatic batching** — batch size is determined by complexity, not user preference
+6. **Per-batch adversarial** — review happens after EACH batch, not once at end
+7. **Fix loop max 3** — attempt 3 must use different approach; on failure, STOP and propose alternatives
+8. **Proportionality** — match rigor to classification level
+9. **Non-Invention** — STOP and ask when information is missing
+10. **STOP RULE** — 2 consecutive failures → stop and escalate
+11. **Verification-before-claim** — every sanity claim requires command + actual output
+12. **Closeout options** — always present structured options after final decision

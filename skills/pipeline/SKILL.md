@@ -1,11 +1,11 @@
 ---
 name: pipeline
-description: Use when any non-trivial task needs structured execution with classification, TDD, adversarial review, and validation. Triggers on implementation requests, bug fixes, features, audits, or security reviews that affect 2+ files or require careful orchestration.
+description: "Automated multi-agent pipeline for any project. Use when ANY task needs structured execution — bug fixes, features, audits, user stories, UX reviews. A single /pipeline command auto-classifies, confirms with user, then executes with TDD, batch processing, adversarial review per batch, and Go/No-Go validation. Always use this for tasks affecting 2+ files or requiring careful orchestration. Even if the user doesn't mention 'pipeline' — if the task is non-trivial, this skill applies."
 ---
 
 # Pipeline Orchestrator
 
-Multi-agent TDD pipeline that classifies tasks, generates tests with user approval, implements with TDD, reviews adversarially, and validates before completion.
+Single-command multi-agent pipeline that auto-classifies tasks, executes in adaptive batches with TDD and per-batch adversarial review, then validates before completion.
 
 ## When to Use
 
@@ -14,6 +14,7 @@ Multi-agent TDD pipeline that classifies tasks, generates tests with user approv
 - Security-sensitive changes
 - Audits and code reviews
 - User stories needing translation to technical tasks
+- UX simulation and journey testing
 
 ## When NOT to Use
 
@@ -25,45 +26,64 @@ Multi-agent TDD pipeline that classifies tasks, generates tests with user approv
 
 | Mode | Command | Description |
 |------|---------|-------------|
-| Full | `/pipeline [request]` | Complete 6-stage execution |
-| Diagnostic | `/pipeline diagnostic [request]` | Classification only (stops after stage 2) |
-| Continue | `/pipeline continue` | Resume from stage 3 |
-| Force level | `/pipeline --simples\|--media\|--complexa [request]` | Override classification |
+| Full | `/pipeline [task]` | Complete 4-phase execution |
+| Diagnostic | `/pipeline diagnostic [task]` | Classification + proposal only |
+| Continue | `/pipeline continue` | Resume from Phase 2 |
+| Force level | `/pipeline --simples\|--media\|--complexa [task]` | Override classification |
 
-## Pipeline Stages
+## Pipeline Phases
 
 ```
-1. Context Classifier    → SIMPLES / MEDIA / COMPLEXA
-2. Orchestrator          → Selects pipeline type + persona
-2.5 Quality Gate         → Test scenarios in plain language (USER APPROVAL)
-2.6 Pre-Tester           → Automated tests that MUST FAIL (RED)
-3. Executor              → Implements minimum code (GREEN)
-4. Adversarial Reviewer  → Security + quality checklists (proportional)
-5. Sanity Checker        → Build + tests + regression
-6. Final Validator       → GO / CONDITIONAL / NO-GO
+Phase 0: Automatic Triage
+  task-orchestrator (classify) → information-gate (detect gaps)
+
+Phase 1: Proposal + Confirmation
+  Present classification → user confirms (yes/no/adjust)
+
+Phase 2: Batch Execution
+  TDD: quality-gate-router → pre-tester (RED)
+  Implementation: executor-controller (adaptive batches)
+    Per batch: micro-gate → implement → checkpoint → adversarial
+    Fix loop: max 3 attempts, then escalate
+
+Phase 3: Closure
+  sanity-checker → final-validator (Pa de Cal) → finishing-branch
 ```
 
 ## Configuration
 
-Create `.claude/pipeline.local.md` in your project for customization:
+Create `.claude/pipeline.local.md` in your project:
 
 ```yaml
 ---
 doc_path: ".pipeline/docs"
-spec_path: ".kiro/specs"
+spec_path: "specs/"
 build_command: "npm run build"
 test_command: "npm test"
 patterns_file: "PATTERNS.md"
-pipeline_recipes:
-  - bugfix-light
-  - bugfix-heavy
-  - implement-light
-  - implement-heavy
-  - audit-light
-  - audit-heavy
-  - user-story-light
-  - user-story-heavy
 ---
 ```
 
 If no config exists, the pipeline auto-detects from `package.json`, `Makefile`, or common conventions.
+
+## Pipeline Variants
+
+5 types × 2 intensities = 10 variants (see `references/pipelines/`):
+
+| Type | Light (MEDIA) | Heavy (COMPLEXA) |
+|------|---------------|-------------------|
+| Bug Fix | bugfix-light | bugfix-heavy |
+| Feature | implement-light | implement-heavy |
+| User Story | user-story-light | user-story-heavy |
+| Audit | audit-light | audit-heavy |
+| UX Simulation | ux-sim-light | ux-sim-heavy |
+
+SIMPLES tasks use DIRETO (direct execution without pipeline).
+
+## Key Safety Features
+
+- **Defense-in-depth gates:** macro-gate (after classification) + micro-gate (per task)
+- **Per-batch adversarial review:** catches issues early, not just at the end
+- **Fix loop cap:** max 3 attempts, 3rd must use different approach, then escalates
+- **Stop rule:** 2 consecutive build/test failures → pipeline stops
+- **Non-invention:** never guesses missing information — asks the user
