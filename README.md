@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="docs/assets/fx-studio-ai-logo.png" alt="FX Studio AI" width="400">
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Claude_Code-Plugin-7C3AED?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTEyIDJMNiA3djEwbDYgNSA2LTVWN3oiLz48L3N2Zz4=" alt="Claude Code Plugin">
   <img src="https://img.shields.io/badge/version-2.0.0-blue?style=for-the-badge" alt="Version 2.0.0">
   <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License">
@@ -13,6 +17,10 @@
   <br>
   A multi-agent pipeline plugin for <a href="https://claude.ai/code">Claude Code</a> that turns<br>
   <code>/pipeline fix the auth bug</code> into a classified, tested, reviewed, and validated change.
+</p>
+
+<p align="center">
+  <sub>by <strong>FX Studio AI</strong></sub>
 </p>
 
 <p align="center">
@@ -120,7 +128,7 @@ You say **yes**. It writes tests first (TDD), implements the fix, reviews it for
 ### 1. Install
 
 ```bash
-git clone https://github.com/user/pipeline-orchestrator.git ~/.claude/plugins/pipeline-orchestrator
+git clone https://github.com/fernandoxavier02/Skill-Pipeline.git ~/.claude/plugins/pipeline-orchestrator
 ```
 
 Or add to your Claude Code settings:

@@ -3,8 +3,8 @@
   "version": "2.0.0",
   "description": "Single-command multi-agent pipeline for Claude Code. Auto-classifies tasks, executes in adaptive batches with adversarial review per batch, defense-in-depth information gates, and proportional validation. Works with any project.",
   "author": {
-    "name": "Ralph",
-    "url": "https://github.com/user/pipeline-orchestrator"
+    "name": "FX Studio AI",
+    "url": "https://github.com/fernandoxavier02/Skill-Pipeline"
   },
   "license": "MIT",
   "keywords": [
