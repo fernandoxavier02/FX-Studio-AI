@@ -176,6 +176,63 @@ CHECKPOINT_RESULT:
 
 ---
 
+## TDD PROMOTION & REGRESSION TRACKING
+
+After a batch passes ALL checks, its TDD tests are **promoted** to the regression suite.
+
+### Promotion Process
+
+```
+Batch N passes checkpoint
+    ↓
+Identify test files created/modified in batch N
+    ↓
+Add to regression registry
+    ↓
+Next checkpoint runs ALL promoted tests + current batch tests
+```
+
+### Regression Registry
+
+Track promoted tests in checkpoint output:
+
+```yaml
+regression_registry:
+  - batch: 1
+    test_files: ["src/auth.test.ts"]
+    promoted_at: "ISO"
+  - batch: 2
+    test_files: ["src/player.test.ts"]
+    promoted_at: "ISO"
+```
+
+### Cumulative Validation
+
+| Checkpoint | Regression Scope |
+|------------|-----------------|
+| After Batch 1 | Batch 1 tests only |
+| After Batch 2 | Batch 1 (promoted) + Batch 2 |
+| After Batch N | ALL promoted + Batch N |
+
+**Regression detected = checkpoint FAIL:**
+
+```yaml
+REGRESSION_DETECTED:
+  broken_test: "src/auth.test.ts"
+  originally_from_batch: 1
+  broken_by_batch: 3
+  error: "[message]"
+```
+
+### Promotion Rules
+
+1. **Only on PASS** — Promote ONLY when full checkpoint passes
+2. **Cumulative** — Registry grows with each successful batch
+3. **Regression = FAIL** — Broken promoted test = checkpoint failure
+4. **Track origin** — Record which batch created each test
+
+---
+
 ## RULES
 
 1. **Evidence only** — Every claim needs command + actual output
@@ -184,3 +241,5 @@ CHECKPOINT_RESULT:
 4. **STOP at 2** — Two consecutive failures = pipeline stops
 5. **Proportional** — Only run checks appropriate to the complexity level
 6. **Fast** — Use haiku model for speed; validation should be quick
+7. **Promote on pass** — Promote batch tests to regression registry after successful checkpoint
+8. **Cumulative regression** — Each checkpoint validates ALL promoted tests

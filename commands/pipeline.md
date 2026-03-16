@@ -65,7 +65,7 @@ Every agent in this pipeline follows these 5 principles:
 |    ┌──────────────────────────────────────────────┐                |
 |    │  PER BATCH:                                   │                |
 |    │  micro-gate → implementer → spec-review       │                |
-|    │  → quality-review                              │                |
+|    │  → quality-review → architecture-review        │                |
 |    │                                                │                |
 |    │  POST BATCH:                                   │                |
 |    │  checkpoint-validator (build+test)              │                |
@@ -98,6 +98,31 @@ Analyze `<arguments>` to determine mode:
 | `/pipeline --simples [task]` | FULL + force SIMPLES | Override classification |
 | `/pipeline --media [task]` | FULL + force MEDIA | Override classification |
 | `/pipeline --complexa [task]` | FULL + force COMPLEXA | Override classification |
+| `/pipeline --hotfix [task]` | **HOTFIX** | Emergency bypass for production incidents |
+
+### HOTFIX Mode (Emergency Bypass)
+
+When `--hotfix` is specified:
+
+1. **Classification:** Force type=Bug Fix, complexity=COMPLEXA, severity=Critical
+2. **Information-Gate:** Simplified — only BLOCKER questions (security + data), skip clarifications
+3. **Confirmation:** Auto-proceed (no user confirmation gate)
+4. **TDD:** Required but minimal — 1 regression test proving the fix
+5. **Batch size:** 1 task at a time (maximum control)
+6. **Adversarial:** Security checklists only (auth + injection)
+7. **Sanity:** Build + tests (no full regression)
+8. **Pa de Cal:** Standard GO/NO-GO still applies
+
+**HOTFIX does NOT skip validation** — it reduces scope but maintains safety:
+
+| Phase | Normal COMPLEXA | HOTFIX |
+|-------|----------------|--------|
+| Info-Gate | Full questions | BLOCKER only |
+| User confirm | Required | Auto-proceed |
+| TDD | Full suite | 1 regression test |
+| Adversarial | 7 checklists | 2 checklists (auth + injection) |
+| Sanity | Build + tests + regression | Build + tests |
+| Pa de Cal | Full | Standard |
 
 ---
 
@@ -302,7 +327,9 @@ Spawn `executor-controller` (model: opus).
 ```
 micro-gate check → implementer task → spec review → quality review
         ↓ (if gap)          ↓ (if done)
-   STOP & report       checkpoint-validator (build+test)
+   STOP & report       architecture-review (MEDIA/COMPLEXA only)
+                              ↓ (if PASS or SIMPLES)
+                        checkpoint-validator (build+test)
                               ↓ (if PASS)
                         adversarial-batch (proportional checklists)
                               ↓ (if findings)

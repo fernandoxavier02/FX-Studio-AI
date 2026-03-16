@@ -58,3 +58,46 @@ Always show:
 - What will happen
 - Which branch is affected
 - Whether it's reversible
+
+---
+
+## ROLLBACK STRATEGY
+
+If deployment fails after the pipeline approved the changes:
+
+### Immediate Rollback (< 5 minutes after deploy)
+
+```bash
+# Revert the last commit
+git revert HEAD --no-edit
+git push origin [branch-name]
+# Re-deploy previous version
+```
+
+### Delayed Rollback (issue found later)
+
+```bash
+# Identify the commit to revert
+git log --oneline -10
+# Revert specific commit
+git revert [commit-hash] --no-edit
+# Create hotfix branch
+git checkout -b hotfix/revert-[short-desc]
+git push -u origin hotfix/revert-[short-desc]
+```
+
+### Rollback Decision Matrix
+
+| Scenario | Action | Urgency |
+|----------|--------|---------|
+| Deploy fails (build error) | Redeploy previous version | Immediate |
+| Users report crash | `git revert HEAD` + redeploy | Immediate |
+| Subtle bug found in production | Create hotfix branch + `/pipeline --hotfix` | Within hours |
+| Performance degradation | Investigate first, rollback if > 30% impact | Measured |
+
+### Post-Rollback Checklist
+
+1. Verify rollback deployed successfully
+2. Confirm users can access the service
+3. Document what went wrong in pipeline docs
+4. Re-enter pipeline with `/pipeline --hotfix` to fix properly

@@ -79,6 +79,22 @@ FINDING:
 | **Important** | Correctness issue or significant quality gap | MUST fix before closing work |
 | **Minor** | Style, optimization, or low-risk observation | Document only, defer |
 
+### Severity Examples
+
+| Severity | Example | Why |
+|----------|---------|-----|
+| **Critical** | SQL/NoSQL injection in user input → query | Exploitable: attacker can read/modify data |
+| **Critical** | Auth check missing on endpoint | Exploitable: unauthorized access |
+| **Critical** | Secrets/API keys hardcoded in source | Data loss: credentials exposed in repo |
+| **Critical** | User data written without permission check | Data loss: any user can overwrite others |
+| **Important** | Race condition in state update | Correctness: intermittent wrong behavior |
+| **Important** | Error swallowed silently (empty catch) | Quality: failures invisible to operators |
+| **Important** | Business logic produces wrong result | Correctness: user sees incorrect data |
+| **Important** | Missing input validation on API boundary | Quality: garbage in → garbage out |
+| **Minor** | Console.log left in production code | Style: noisy logs but no harm |
+| **Minor** | Non-optimal query (N+1) on low-traffic path | Performance: slow but functional |
+| **Minor** | Inconsistent naming convention | Style: readability, not correctness |
+
 ---
 
 ## FIX LOOP (Max 3 Attempts)

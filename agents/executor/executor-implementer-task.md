@@ -39,6 +39,53 @@ Return this to executor-controller. Do NOT proceed. Do NOT guess.
 
 ---
 
+## CONTEXT LOADING STRATEGY (MANDATORY)
+
+Before reading ANY file, follow these rules to maximize context efficiency:
+
+### File Size Decision Matrix
+
+| File Size | Action | Rationale |
+|-----------|--------|-----------|
+| < 100 lines | `Read` entire file | Small enough for full context |
+| 100-500 lines | `Grep -A 30` around integration point | Preserve context budget |
+| > 500 lines | `Grep -A 15` for specific function/section | Only the minimum needed |
+
+### Mandatory Pre-Read Steps
+
+1. **Read imports + types FIRST** — Before modifying any file, scan its imports and type definitions:
+   ```
+   Grep: "^import\|^export type\|^export interface" {file}
+   ```
+2. **Identify integration point** — Find exactly WHERE your change goes:
+   ```
+   Grep -n "{function_name\|class_name}" {file}
+   ```
+3. **Check for existing abstractions** — Before creating new helpers:
+   ```
+   Grep: "{pattern}" across project to find existing implementations
+   ```
+
+### Pattern File Loading
+
+If PROJECT_CONFIG includes a `patterns_file`:
+- **NEVER** read the entire patterns file
+- **ALWAYS** grep for the specific pattern needed:
+  ```
+  Grep -A 20 "{relevant_section}" {patterns_file}
+  ```
+
+### Anti-Patterns
+
+| Anti-Pattern | Correct Approach |
+|--------------|-----------------|
+| Read entire 2000-line file | Grep for the function you need |
+| Read patterns file fully | Grep for specific pattern section |
+| Skip import scanning | Always scan imports before editing |
+| Create new helper without searching | Grep project for existing helpers first |
+
+---
+
 ## IRON LAWS (non-negotiable)
 
 1. **Micro-Gate First** — Run the 5 checks above BEFORE anything else

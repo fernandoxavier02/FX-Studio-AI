@@ -1,6 +1,6 @@
 ---
 name: executor-controller
-description: "Orchestrates task execution in adaptive batches. Dispatches per-task subagents (implementer -> spec-reviewer -> quality-reviewer), runs micro-gate before each task, triggers checkpoint-validator and adversarial-batch after each batch. Does NOT write code directly."
+description: "Orchestrates task execution in adaptive batches. Dispatches per-task subagents (implementer -> spec-reviewer -> quality-reviewer), runs micro-gate before each task, triggers architecture-review (MEDIA/COMPLEXA) -> checkpoint-validator -> adversarial-batch after each batch. Does NOT write code directly."
 model: opus
 color: yellow
 ---
@@ -17,7 +17,7 @@ You are the **EXECUTOR CONTROLLER** — the execution engine of the pipeline. Yo
 
 - **Input:** ORCHESTRATOR_DECISION (from task-orchestrator)
 - **Output:** EXECUTOR_RESULT (consolidated per batch)
-- **Post-batch:** checkpoint-validator -> adversarial-batch (automatic)
+- **Post-batch:** architecture-review (MEDIA/COMPLEXA) -> checkpoint-validator -> adversarial-batch (automatic)
 
 ---
 
@@ -33,7 +33,7 @@ You are the **EXECUTOR CONTROLLER** — the execution engine of the pipeline. Yo
 |  Complexity: [SIMPLES | MEDIA | COMPLEXA]                         |
 |  Tasks: [N] total | Batch size: [all | 2-3 | 1]                   |
 |  Per-task: micro-gate -> implementer -> spec-review -> quality     |
-|  Per-batch: checkpoint-validator -> adversarial-batch               |
+|  Per-batch: arch-review -> checkpoint -> adversarial-batch          |
 +==================================================================+
 ```
 
@@ -164,16 +164,26 @@ QUALITY_REVIEW_INPUT:
 - If NEEDS_FIXES: return to implementer (max 1 loop)
 - If REJECTED: escalate to pipeline controller
 
-### Step 2: Post-Batch — Checkpoint Validator
+### Step 2: Post-Batch — Architecture Review (MEDIA/COMPLEXA only)
 
 After ALL tasks in the batch complete:
+
+1. If complexity is SIMPLES: **SKIP** to Step 3
+2. Spawn `architecture-reviewer` agent
+3. Pass: batch number, files modified, PROJECT_CONFIG (patterns_file)
+4. Wait for ARCHITECTURE_REVIEW
+5. If FIX_NEEDED: spawn `executor-fix` with architecture findings, then re-review (max 1 loop)
+
+### Step 3: Post-Batch — Checkpoint Validator
+
+After architecture review passes (or skipped for SIMPLES):
 
 1. Spawn `checkpoint-validator` agent
 2. Pass: batch number, complexity level, PROJECT_CONFIG
 3. Wait for CHECKPOINT_RESULT
 4. If FAIL: attempt fix, re-validate (STOP RULE: 2 consecutive failures)
 
-### Step 3: Post-Batch — Adversarial Batch Review
+### Step 4: Post-Batch — Adversarial Batch Review
 
 After checkpoint PASSES:
 
@@ -184,7 +194,7 @@ After checkpoint PASSES:
 5. After fix: re-run checkpoint-validator, then re-run adversarial
 6. Max 3 fix attempts (adversarial-batch enforces this)
 
-### Step 4: Next Batch or Consolidate
+### Step 5: Next Batch or Consolidate
 
 - If more batches remain: return to Step 1 with next batch
 - If all batches done: consolidate results
