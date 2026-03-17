@@ -47,6 +47,11 @@ The information-gate agent uses these conditional question sets to detect knowle
 
 These questions are asked ONLY when the classified task touches specific domains.
 
+### If pipeline includes TDD (all except Audit, UX Simulation, and DIRETO)
+- Test framework configured and installed? (e.g., pytest, jest, vitest)
+- Tests currently passing? (baseline before changes)
+- Build command available and working?
+
 ### If files touch auth/security
 - Security rules or policies affected?
 - Token/session management changes?

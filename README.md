@@ -210,16 +210,9 @@ Add this to your `~/.claude/settings.json` (create the file if it doesn't exist)
 
 ### Proportional Rigor
 
-The pipeline doesn't treat a typo fix like a database migration. Rigor scales automatically:
+The pipeline doesn't treat a typo fix like a database migration. Rigor scales automatically.
 
-| | SIMPLES | MEDIA | COMPLEXA |
-|:---|:---:|:---:|:---:|
-| **Files** | 1-2 | 3-5 | 6+ |
-| **Batch size** | all at once | 2-3 per batch | 1 per batch |
-| **TDD** | 1 test | 3 tests | full suite |
-| **Architecture review** | skip | check patterns | deep analysis |
-| **Adversarial** | optional | 3 checklists | all 7 checklists |
-| **Regression tracking** | skip | per-checkpoint | cumulative |
+**SSOT:** Full proportional behavior table at `references/complexity-matrix.md` section "Proportional Behavior by Complexity".
 
 ---
 
@@ -339,13 +332,7 @@ Code that compiles and passes tests but **doesn't fit your codebase** gets flagg
 
 5 task types. 3 complexity levels. 10 pipeline variants. Automatically selected.
 
-| Type | SIMPLES | MEDIA | COMPLEXA |
-|:-----|:-------:|:-----:|:--------:|
-| **Bug Fix** | direct | `bugfix-light` | `bugfix-heavy` |
-| **Feature** | direct | `implement-light` | `implement-heavy` |
-| **User Story** | direct | `user-story-light` | `user-story-heavy` |
-| **Audit** | direct | `audit-light` | `audit-heavy` |
-| **UX Simulation** | direct | `ux-sim-light` | `ux-sim-heavy` |
+**SSOT:** Full routing matrix at `references/complexity-matrix.md` section "Pipeline Routing Matrix".
 
 ---
 
@@ -372,7 +359,7 @@ Code that compiles and passes tests but **doesn't fit your codebase** gets flagg
 
 ## 7 Adversarial Checklists
 
-Loaded proportionally — SIMPLES skips, MEDIA gets 3, COMPLEXA gets all 7:
+Loaded proportionally per `references/complexity-matrix.md` row "Adversarial checklists":
 
 | Checklist | What it catches |
 |:----------|:----------------|

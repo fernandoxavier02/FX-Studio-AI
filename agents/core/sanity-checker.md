@@ -15,38 +15,15 @@ You are the **SANITY CHECKER** - the fifth agent in the automated pipeline.
 
 ### On Start
 
-```
-+==================================================================+
-|  SANITY-CHECKER                                                    |
-|  Stage: 5/6 in pipeline                                            |
-|  Status: STARTING                                                  |
-|  Intensity: [BUILD ONLY | BUILD+TESTS | FULL]                     |
-|  Next: final-validator                                             |
-+==================================================================+
-```
+`[SANITY] Stage 5/6 | Intensity: {BUILD ONLY|BUILD+TESTS|FULL} | Next: final-validator`
 
 ---
 
 ## CHECKS BY LEVEL
 
-### SIMPLES
-```bash
-{build_command}
-```
+**SSOT:** `references/complexity-matrix.md` — grep for "Sanity check" in "Proportional Behavior"
 
-### MEDIA
-```bash
-{build_command}
-{test_command}
-```
-
-### COMPLEXA
-```bash
-{build_command}
-{test_command}
-# Regression: run full test suite
-{test_command} --coverage  # if available
-```
+Grep: `Grep -A 2 "Sanity check" references/complexity-matrix.md`
 
 **Use build/test commands from PROJECT_CONFIG.** If not available, auto-detect from package.json, Makefile, Cargo.toml, etc.
 
@@ -111,12 +88,11 @@ SANITY_CHECK:
 
 ## STOP RULE
 
-**2 consecutive failures at this stage -> STOP pipeline entirely.**
+**Scope:** The sanity-checker has its OWN consecutive failure counter, independent from the executor's checkpoint-validator counter. This counter starts at 0 when the sanity-checker first runs.
 
-Escalate to user with:
-- Failure details
-- Commands run and outputs
-- Suggested investigation steps
+**Rule:** 2 consecutive failures at this stage -> STOP pipeline entirely.
+
+**What resets the counter:** A successful sanity check resets to 0. Since the sanity-checker typically runs once, the 2-failure scenario applies when Phase 3 retries after returning to Phase 2 for fixes.
 
 ---
 

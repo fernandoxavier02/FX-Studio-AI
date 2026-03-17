@@ -47,11 +47,9 @@ Gather outputs from every previous stage:
 
 ### Step 2: Apply Proportional Criteria
 
-| Level | Build | Tests | Adversarial | Regression |
-|-------|-------|-------|-------------|------------|
-| SIMPLES | MUST pass | Optional | Optional | N/A |
-| MEDIA | MUST pass | MUST pass | No high vulns | Optional |
-| COMPLEXA | MUST pass | MUST pass | No vulns | MUST pass + AC met |
+**SSOT:** `references/complexity-matrix.md` — grep for "Pa de Cal criteria" in "Proportional Behavior"
+
+Grep: `Grep -A 2 "Pa de Cal criteria" references/complexity-matrix.md`
 
 ### Step 3: Issue Decision
 

@@ -37,12 +37,24 @@ WHEN [action]
 THEN [expected result]
 ```
 
-### Step 4: Run Tests
+### Step 4: Run Tests and Verify RED
 
 Execute tests — they MUST FAIL (RED):
 ```bash
 {test_command} [test-file]
 ```
+
+**CRITICAL: Verify the failure is for the RIGHT REASON.**
+
+| Failure Type | Status | Action |
+|-------------|--------|--------|
+| **AssertionError / test assertion fails** | CORRECT RED | Proceed — behavior not yet implemented |
+| **ImportError / ModuleNotFoundError** | WRONG RED | STOP — test imports non-existent module. Fix import or report gap. |
+| **SyntaxError / IndentationError** | WRONG RED | STOP — test code has syntax issues. Fix before proceeding. |
+| **FileNotFoundError** | WRONG RED | STOP — test references non-existent file. Verify path. |
+| **TypeError / NameError** | EVALUATE | If caused by missing implementation -> CORRECT RED. If caused by test bug -> fix test, re-run, and emit `RED_CONFIRMED` with note `test_bug_fixed: "[description]"`. |
+
+**Rule:** A test that fails because it CAN'T RUN (import/syntax/file errors) is NOT a valid RED test. Only tests that run but FAIL on assertions count as valid RED.
 
 If tests PASS immediately:
 - The behavior already exists

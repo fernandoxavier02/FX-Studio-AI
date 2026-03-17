@@ -64,13 +64,11 @@ You are the **EXECUTOR CONTROLLER** — the execution engine of the pipeline. Yo
 
 ## ADAPTIVE BATCH SIZING
 
-Batch size is determined automatically by complexity — no user interaction needed:
+Batch size is determined automatically by complexity — no user interaction needed.
 
-| Complexity | Tasks per Batch | Rationale |
-|------------|----------------|-----------|
-| SIMPLES | All tasks at once | Low risk, fast execution |
-| MEDIA | 2-3 tasks | Balanced risk/speed |
-| COMPLEXA | 1 task | Maximum control, per-task validation |
+**SSOT:** `references/complexity-matrix.md` row "Batch size" in "Proportional Behavior by Complexity"
+
+Grep: `Grep -A 2 "Batch size" references/complexity-matrix.md`
 
 ---
 
@@ -179,9 +177,10 @@ After ALL tasks in the batch complete:
 After architecture review passes (or skipped for SIMPLES):
 
 1. Spawn `checkpoint-validator` agent
-2. Pass: batch number, complexity level, PROJECT_CONFIG
-3. Wait for CHECKPOINT_RESULT
+2. Pass: batch number, complexity level, PROJECT_CONFIG, **consecutive_failures_in** (from previous checkpoint result, or 0 for first batch)
+3. Wait for CHECKPOINT_RESULT — store `consecutive_failures` from output
 4. If FAIL: attempt fix, re-validate (STOP RULE: 2 consecutive failures)
+5. **Counter persistence:** Always pass the stored `consecutive_failures` value to the NEXT checkpoint-validator invocation. The counter resets to 0 only when a checkpoint returns PASS.
 
 ### Step 4: Post-Batch — Adversarial Batch Review
 
@@ -201,14 +200,24 @@ After checkpoint PASSES:
 
 ---
 
-## EXECUTOR-FIX (Separate Subagent)
+## EXECUTOR-FIX (Dedicated Agent)
 
-When adversarial-batch reports findings that need fixing:
+When adversarial-batch or architecture-reviewer reports findings that need fixing:
 
-- Spawn a FRESH subagent (not the original implementer)
-- Provide: finding details, files affected, recommendation
-- The fix agent has clean context — no bias from original implementation
-- After fix: MUST run checkpoint-validator before adversarial re-review
+1. **Spawn:** Use Agent tool with `subagent_type: "executor-fix"` (dedicated agent at `agents/executor/executor-fix.md`)
+2. **Pass `files_in_scope`:** SAME file list as the original task — the fix agent has the same write-scope restriction
+3. **Pass `previous_attempts`:** For attempt 2-3, include what was tried and why it failed
+4. **Fresh context:** executor-fix is a SEPARATE subagent — not the original implementer
+5. **After fix:** MUST run checkpoint-validator, then adversarial-batch performs FULL re-review (reference adversarial-batch rule 6 — reviews fix diff for NEW issues, not just original findings)
+
+```yaml
+FIX_CONTEXT:
+  batch: [N]
+  attempt: [1 | 2 | 3]
+  findings: [from adversarial/architecture review]
+  files_in_scope: [SAME as original TASK_CONTEXT]
+  previous_attempts: [for attempt 2-3]
+```
 
 ---
 
