@@ -57,3 +57,22 @@ Values at exact boundaries (e.g., exactly 3 files, exactly 30 lines) are classif
 | **UX Simulation** | DIRETO | ux-sim-light | ux-sim-heavy |
 
 DIRETO = Direct execution without pipeline (build + test only, max 2 files, < 30 lines).
+
+---
+
+## Adversarial Gate Behavior by Complexity
+
+| Aspect | SIMPLES | MEDIA | COMPLEXA |
+|--------|---------|-------|----------|
+| **Per-batch gate** | Ask (skippable) | Ask (skippable) | Ask (skippable) |
+| **Mandatory override** | If auth/crypto/data touched | If auth/crypto/data touched | If auth/crypto/data touched |
+| **Final review gate** | Recommended | Recommended | Strongly recommended |
+| **Final review team** | 1 reviewer (security) | 2 reviewers (security + architecture) | 3 reviewers (security + architecture + quality) |
+| **Final review intensity** | COMPLEXA (always full) | COMPLEXA (always full) | COMPLEXA (always full) |
+
+### Gate Display Rules
+
+1. Per-batch gate: Show AFTER checkpoint passes, BEFORE review-orchestrator
+2. Final gate: Show AFTER sanity-checker, BEFORE final-validator
+3. Always show token cost estimate for final review
+4. Always show as "RECOMMENDED" or "STRONGLY RECOMMENDED" — never hide
