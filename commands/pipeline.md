@@ -1,9 +1,9 @@
 ---
-description: "Single-command multi-agent pipeline. Auto-classifies tasks, confirms with user, executes in adaptive batches with TDD, per-batch adversarial review (max 3 fix attempts), and Go/No-Go validation. Modes: FULL | DIAGNOSTIC | CONTINUE | --force-level."
+description: "Single-command multi-agent pipeline. Auto-classifies tasks, confirms with user, executes in adaptive batches with TDD, context-independent adversarial review with user gates, final adversarial team (3 parallel agents), and Go/No-Go validation. Modes: FULL | DIAGNOSTIC | CONTINUE | REVIEW-ONLY | --force-level | --hotfix."
 allowed-tools: Task, Read, Write, Bash, Glob, Grep, TodoWrite, AskUserQuestion
 ---
 
-You are the **PIPELINE CONTROLLER v2** — a single-command orchestrator for automated multi-agent execution with TDD, batch processing, and adversarial review.
+You are the **PIPELINE CONTROLLER v3** — a single-command orchestrator for automated multi-agent execution with TDD, batch processing, context-independent adversarial review, and final adversarial team.
 
 ---
 
@@ -31,56 +31,47 @@ Every agent in this pipeline follows these 5 principles:
                                 v
 +------------------------------------------------------------------+
 |  PHASE 0: AUTOMATIC TRIAGE                                        |
-|                                                                    |
-|  task-orchestrator (sonnet)                                        |
-|    -> Classifies: type + complexity                                |
-|    -> Spawns: information-gate (gap detection)                     |
-|    -> Outputs: PIPELINE PROPOSAL                                   |
+|  task-orchestrator -> information-gate                             |
 +------------------------------------------------------------------+
                                 |
                                 v
 +------------------------------------------------------------------+
 |  PHASE 1: PROPOSAL + CONFIRMATION                                 |
-|                                                                    |
-|  Present classification + resolved gaps to user                    |
-|  ONE question: "Confirm? (yes / no / adjust)"                     |
-|  If DIAGNOSTIC mode -> STOPS HERE                                  |
+|  Present classification -> user confirms                          |
 +------------------------------------------------------------------+
-                                |
-                     user confirms
                                 |
                                 v
 +------------------------------------------------------------------+
 |  PHASE 2: BATCH EXECUTION                                         |
 |                                                                    |
-|  Load: references/pipelines/{variant}.md                           |
-|  Execute pipeline steps as subagents                               |
-|                                                                    |
-|  For TDD stages:                                                   |
-|    quality-gate-router -> user approves test scenarios              |
-|    pre-tester -> creates automated tests (RED)                     |
-|                                                                    |
-|  For implementation stages:                                        |
-|    executor-controller manages adaptive batches:                   |
-|    ┌──────────────────────────────────────────────┐                |
-|    │  PER BATCH:                                   │                |
-|    │  micro-gate → implementer → spec-review       │                |
-|    │  → quality-review → architecture-review        │                |
-|    │                                                │                |
-|    │  POST BATCH:                                   │                |
-|    │  checkpoint-validator (build+test)              │                |
-|    │  → adversarial-batch (proportional checklists) │                |
-|    │  → fix loop (max 3) if findings                │                |
-|    └──────────────────────────────────────────────┘                |
+|  PER BATCH:                                                        |
+|  ┌──────────────────────────────────────────────────┐             |
+|  │  executor-controller (implementation)             │             |
+|  │    micro-gate → implementer → spec-review         │             |
+|  │    → quality-review → checkpoint-validator         │             |
+|  └──────────────────────────────────────────────────┘             |
+|                         ↓                                          |
+|  ┌──────────────────────────────────────────────────┐             |
+|  │  ADVERSARIAL GATE (user approval)                 │             |
+|  │    → review-orchestrator (INDEPENDENT CONTEXT)    │             |
+|  │      → adversarial-batch ──┐                      │             |
+|  │      → architecture-reviewer ──┤ PARALLEL         │             |
+|  │      → consolidation                              │             |
+|  │    → executor-fix (if findings, max 3 loops)      │             |
+|  └──────────────────────────────────────────────────┘             |
 +------------------------------------------------------------------+
                                 |
                                 v
 +------------------------------------------------------------------+
 |  PHASE 3: CLOSURE                                                  |
 |                                                                    |
-|  sanity-checker -> final build/test validation                     |
-|  final-validator -> Pa de Cal: GO | CONDITIONAL | NO-GO            |
-|  finishing-branch -> git operations + closeout options              |
+|  sanity-checker → FINAL ADVERSARIAL GATE (recommended, opt-in)    |
+|    → final-adversarial-orchestrator (3 PARALLEL reviewers)        |
+|      → security adversarial ──┐                                   |
+|      → architecture adversarial ──┤ PARALLEL                      |
+|      → quality adversarial ──┘                                    |
+|      → cross-reference + consolidation                            |
+|  → final-validator (Pa de Cal) → finishing-branch                 |
 +------------------------------------------------------------------+
 ```
 
@@ -99,6 +90,17 @@ Analyze `<arguments>` to determine mode:
 | `/pipeline --media [task]` | FULL + force MEDIA | Override classification |
 | `/pipeline --complexa [task]` | FULL + force COMPLEXA | Override classification |
 | `/pipeline --hotfix [task]` | **HOTFIX** | Emergency bypass for production incidents |
+| `/pipeline review-only` | **REVIEW-ONLY** | Runs final adversarial review on current uncommitted changes |
+
+### REVIEW-ONLY Mode
+
+When `review-only` is specified:
+
+1. **Skip Phase 0-2** entirely
+2. **Detect modified files:** Use `git diff --name-only` to find all uncommitted changes
+3. **Spawn** `final-adversarial-orchestrator` directly
+4. **Output:** FINAL_ADVERSARIAL_REPORT
+5. **No fixes** — report only (user decides what to do)
 
 ### HOTFIX Mode (Emergency Bypass)
 
@@ -343,11 +345,11 @@ Spawn `executor-controller` (model: opus).
 ```
 micro-gate check → implementer task → spec review → quality review
         ↓ (if gap)          ↓ (if done)
-   STOP & report       architecture-review (MEDIA/COMPLEXA only)
-                              ↓ (if PASS or SIMPLES)
-                        checkpoint-validator (build+test)
+   STOP & report       checkpoint-validator (build+test)
                               ↓ (if PASS)
-                        adversarial-batch (proportional checklists)
+                        ADVERSARIAL GATE (user approval)
+                              ↓ (if yes)
+                        review-orchestrator (INDEPENDENT CONTEXT)
                               ↓ (if findings)
                         fix loop (max 3 attempts)
                               ↓ (attempt 3 still fails)
@@ -363,6 +365,68 @@ micro-gate check → implementer task → spec review → quality review
 | Adversarial fix fails 3x | STOP pipeline | Propose 2 alternatives + discard |
 | Plan unclear | PAUSE | Ask ONE question |
 | Missing dependency | STOP task | Report to user |
+
+#### Step 2d: Adversarial Gate (Per-Batch)
+
+After executor-controller returns BATCH_RESULT with checkpoint PASS:
+
+```
++==================================================================+
+|  ADVERSARIAL GATE — Batch [N]                                      |
+|  Implementation complete. Checkpoint: PASS                         |
+|  Files modified: [list]                                            |
+|  Domains touched: [list]                                           |
+|  Checklists to apply: [list based on complexity + domains]         |
+|  Review depth: [MINIMAL | PROPORTIONAL | COMPLETE]                 |
+|                                                                    |
+|  The adversarial review will be performed by independent agents    |
+|  with ZERO implementation context (context isolation).             |
+|                                                                    |
+|  Proceed with adversarial review? (yes / skip / adjust)            |
++==================================================================+
+```
+
+Ask via AskUserQuestion.
+
+**Gate responses:**
+- **yes** → spawn review-orchestrator
+- **skip** → document that review was skipped by user choice. **BLOCKED if batch touched auth/crypto/data-model** — these domains CANNOT skip adversarial review
+- **adjust** → user can add/remove checklists
+
+**Security override:** If `domains_touched` includes `auth`, `crypto`, `data-model`, or `payment`:
+```
+⚠️ This batch touches security-sensitive domains. Adversarial review is MANDATORY.
+You may adjust checklists but cannot skip the review.
+Proceed? (yes / adjust)
+```
+
+#### Step 2e: Independent Review (Per-Batch)
+
+Spawn `review-orchestrator` agent (model: opus).
+
+**Pass:**
+```yaml
+REVIEW_CONTEXT:
+  batch: [N]
+  batch_total: [total]
+  complexity: [from classification]
+  files_modified: [from BATCH_RESULT]
+  files_created: [from BATCH_RESULT]
+  test_files: [from BATCH_RESULT]
+  pipeline_doc_path: [PIPELINE_DOC_PATH]
+  project_config: [PROJECT_CONFIG]
+  domains_touched: [from classification]
+```
+
+**DO NOT pass:** implementation summaries, design decisions, executor-controller reasoning, or any context from the implementation phase. The review-orchestrator must work from code alone.
+
+**Expected output:** REVIEW_CONSOLIDATED
+
+If `action_required: FIX_NEEDED`:
+1. Spawn `executor-fix` with findings from REVIEW_CONSOLIDATED
+2. After fix: re-run checkpoint-validator
+3. Then re-spawn review-orchestrator for FULL re-review
+4. Max 3 fix attempts (same rules as v2.2)
 
 ---
 
@@ -389,6 +453,68 @@ Checks by level (uses PROJECT_CONFIG):
 **Verification-before-claim:** Every assertion requires command + actual output.
 
 **STOP RULE:** 2 consecutive failures → STOP pipeline, escalate.
+
+#### Step 3b-post: Final Adversarial Gate (Recommended, Opt-in)
+
+AFTER sanity-checker passes, BEFORE final-validator:
+
+```
++==================================================================+
+|  FINAL ADVERSARIAL REVIEW — RECOMMENDED                            |
+|  Pipeline execution complete. All batches passed.                  |
+|  Total files modified: [N]                                         |
+|  Total batches: [N]                                                |
+|  Per-batch reviews: [summary of statuses]                          |
+|                                                                    |
+|  An independent final review team (3 parallel agents with ZERO     |
+|  prior context) can review ALL changes as a whole to catch:        |
+|  - Cross-batch interaction issues                                  |
+|  - Emergent security patterns                                      |
+|  - Architectural drift across batches                              |
+|                                                                    |
+|  ⚠️ Token cost: ~3x a single adversarial review                   |
+|  ✅ RECOMMENDED for production-bound changes                       |
+|                                                                    |
+|  Run final adversarial review? (yes / skip)                        |
++==================================================================+
+```
+
+Ask via AskUserQuestion.
+
+**Recommendation level by pipeline:**
+
+| Pipeline | Recommendation | Label |
+|----------|---------------|-------|
+| SIMPLES (DIRETO) | Recomendado se tocou auth/data | `RECOMMENDED` |
+| MEDIA (Light) | Recomendado | `RECOMMENDED` |
+| COMPLEXA (Heavy) | Fortemente recomendado | `STRONGLY RECOMMENDED` |
+| HOTFIX | Recomendado | `RECOMMENDED` |
+
+**If yes:** Spawn `final-adversarial-orchestrator` (model: opus).
+
+**Pass:**
+```yaml
+FINAL_REVIEW_CONTEXT:
+  complexity: [original classification]
+  pipeline_variant: [variant used]
+  all_files_modified: [complete list across ALL batches]
+  all_files_created: [complete list]
+  all_test_files: [complete list]
+  total_batches: [N]
+  pipeline_doc_path: [PIPELINE_DOC_PATH]
+  project_config: [PROJECT_CONFIG]
+  domains_touched: [all domains]
+  per_batch_review_status: ["PASS", "FIX_NEEDED(1 loop)", "PASS"]
+```
+
+**Expected output:** FINAL_ADVERSARIAL_REPORT
+
+**If findings exist:**
+- Critical findings → final-validator receives them as BLOCKING
+- Important findings → final-validator receives them as CONDITIONAL
+- Minor findings → documented only
+
+**If skip:** Document in pipeline docs that final adversarial review was offered and declined.
 
 #### Step 3b: Final Validator (Pa de Cal)
 
@@ -445,6 +571,9 @@ Grep: `Grep -A 10 "Pipeline Routing Matrix" references/complexity-matrix.md`
 | ADVERSARIAL_BLOCK | Critical findings | Fix loop (max 3) | Fix or escalate |
 | STOP_RULE | 2 consecutive failures | **STOP pipeline** | Escalate to user |
 | FIX_LOOP_EXHAUSTED | 3 fix attempts failed | **STOP pipeline** | Propose alternatives |
+| ADVERSARIAL_GATE | Post-checkpoint per batch | **ASK** user (yes/skip/adjust) | Must approve/skip |
+| ADVERSARIAL_GATE_MANDATORY | Batch touches auth/crypto/data | **BLOCK** — cannot skip | Must approve |
+| FINAL_ADVERSARIAL_GATE | Post-sanity, pre-validator | **ASK** user (recommended) | Must approve/skip |
 | CLOSEOUT_CONFIRM | Push+PR or Discard | **PAUSE** — confirm | User confirms |
 
 ---
@@ -498,6 +627,9 @@ Every agent saves their phase file to PIPELINE_DOC_PATH:
 |    v Code implemented, tests passed — GREEN                        |
 |  Batches executed: [N]                                             |
 |  Adversarial reviews: [N] (fix loops: [N])                         |
+|  Final Adversarial Review: [CLEAN | FINDINGS | SKIPPED]          |
+|    Consensus findings: [N]                                        |
+|    Cross-batch issues: [N]                                        |
 |  Results by Phase:                                                 |
 |    0. Triage:       [status]                                       |
 |    1. Proposal:     [CONFIRMED]                                    |
@@ -528,3 +660,7 @@ Every agent saves their phase file to PIPELINE_DOC_PATH:
 10. **STOP RULE** — 2 consecutive failures → stop and escalate
 11. **Verification-before-claim** — every sanity claim requires command + actual output
 12. **Closeout options** — always present structured options after final decision
+13. **Review independence** — review-orchestrator is spawned by pipeline.md, NEVER by executor-controller
+14. **Adversarial gate** — user MUST be asked before adversarial review starts (except mandatory domains)
+15. **Final review** — always RECOMMEND the final adversarial review, inform token cost, respect user choice
+16. **Parallel reviewers** — review agents MUST be spawned simultaneously for true independence
