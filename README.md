@@ -3,8 +3,9 @@
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/github/stars/fernandoxavier02/Pipeline-Orchestrator?style=for-the-badge&color=7C3AED" alt="GitHub Stars">
   <img src="https://img.shields.io/badge/Claude_Code-Plugin-7C3AED?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTEyIDJMNiA3djEwbDYgNSA2LTVWN3oiLz48L3N2Zz4=" alt="Claude Code Plugin">
-  <img src="https://img.shields.io/badge/version-3.0.0-blue?style=for-the-badge" alt="Version 3.0.0">
+  <img src="https://img.shields.io/badge/version-3.0.1-blue?style=for-the-badge" alt="Version 3.0.1">
   <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License">
   <img src="https://img.shields.io/badge/agents-17-orange?style=for-the-badge" alt="17 Agents">
   <img src="https://img.shields.io/badge/dependencies-zero-black?style=for-the-badge" alt="Zero Dependencies">
@@ -20,6 +21,12 @@
   architecture conformance, and evidence-based validation --<br>
   so you can trust what AI builds for you.<br><br>
   <em>One command. Seventeen agents. Every claim backed by proof.</em>
+</p>
+
+<p align="center">
+  &nbsp;&nbsp;✓&nbsp; <strong>Tests before code</strong> — always (TDD enforced, RED must fail before GREEN runs)<br>
+  &nbsp;&nbsp;✓&nbsp; <strong>Asks, never guesses</strong> — reads your code first, then asks exactly what's missing<br>
+  &nbsp;&nbsp;✓&nbsp; <strong>Reviewers with zero bias</strong> — adversarial agents see no implementation context<br>
 </p>
 
 <p align="center">
@@ -686,6 +693,25 @@ pipeline-orchestrator/
 ---
 
 ## Changelog
+
+### v3.0.1 -- Clarification Quality & Anti-Invention (2026-03-19)
+
+**Information Gate — Code-First Gap Detection**
+- `information-gate` now reads affected files **before** evaluating any questions (Step 0). Questions that the code already answers are skipped; questions that remain are asked with code-anchored context.
+- Rule #7 strengthened: no silent defaults, no invented values, no "reasonable assumptions" — every unresolved gap is blocked until answered.
+- Rule #8 added: no limit on number of questions. The goal is zero invention, not fewer interruptions.
+- `macro-gate-questions.md`: code read in Step 0 counts as a valid resolution source for pre-defined questions.
+
+**Executor Implementer — Micro-Gate + Return Loop**
+- Micro-gate Check #1 (file exists?) now immediately triggers a file read. Checks 2–5 evaluate against both the task description **and** the file content — checks no longer fail on info already in the code.
+- New `RETURN LOOP` (`status: QUESTIONS`): mid-implementation trade-offs are surfaced with code observation, trade-off framing, and a proposed default. Implementer no longer silently makes architectural choices.
+
+**Structural fixes**
+- `final-validator`: dead reference to context-classifier removed; correct agent chain documented.
+- `architecture-reviewer`: WHEN TO RUN updated to reflect v3.0 review-orchestrator flow.
+- `quality-gate-router`: model downgraded from opus to sonnet (plain-language test scenarios don't need deep reasoning).
+
+---
 
 ### v3.0.0 -- Independent Review Architecture (2026-03-17)
 
