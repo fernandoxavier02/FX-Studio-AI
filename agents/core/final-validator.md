@@ -37,8 +37,8 @@ Gather outputs from every previous stage:
 
 | Stage | Output | Status |
 |-------|--------|--------|
-| 1. Classifier | CONTEXT_CLASSIFICATION | [received] |
-| 2. Orchestrator | ORCHESTRATOR_DECISION | [received] |
+| 1. Task Orchestrator | ORCHESTRATOR_DECISION | [received] |
+| 2. Information Gate | INFORMATION_GATE | [received] |
 | 2.5 Quality Gate | QUALITY_GATE_APPROVED | [received] |
 | 2.6 Pre-Tester | PRE_TESTER_RESULT | [received] |
 | 3. Executor | EXECUTOR_RESULT | [received] |

@@ -87,7 +87,7 @@ These questions are asked ONLY when the classified task touches specific domains
 ## Question Protocol
 
 1. **ONE question at a time** — never present the full list
-2. **Skip if answered** — if the user's request already covers a question, don't ask it
+2. **Skip if answered** — if the answer is present in the user's request, in the code the information-gate read in Step 0, or is directly inferrable from observable project conventions, mark it resolved. The code is part of the context — but only skip if clearly answered, not if "probably fine".
 3. **BLOCKER vs IMPORTANT** — classify each gap by severity
 4. **Max 2 options** — if offering alternatives, present at most 2 with pros/cons
 5. **Stop when clear** — once all relevant gaps are resolved, proceed immediately

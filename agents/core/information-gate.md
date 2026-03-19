@@ -57,6 +57,25 @@ When reading project files, specs, or the question bank for gap detection, follo
 
 ## PROCESS
 
+### Step 0: Read Affected Files FIRST
+
+Before loading any questions, read the files identified by task-orchestrator in `probable_files`.
+
+| File size | Action |
+|-----------|--------|
+| < 100 lines | `Read` entire file |
+| 100–500 lines | `Grep -A 30` around the integration point |
+| > 500 lines | `Grep -A 15` for key functions/classes |
+
+After reading, note:
+- Values, constants, or paths already defined in the code
+- Existing patterns and abstractions relevant to the task
+- Trade-offs visible in the current implementation
+
+**Rationale:** Reading the code first means two things: (1) some "gaps" will resolve themselves — the code already answers them; (2) the questions that DO need to be asked will be specific and anchored in what you actually saw, not generic checklist items.
+
+---
+
 ### Step 1: Load Conditional Questions
 
 Read `references/gates/macro-gate-questions.md` for the full question bank.
@@ -65,12 +84,14 @@ Select questions based on:
 1. **Task type** detected by task-orchestrator (Bug Fix, Feature, User Story, Audit, UX Simulation)
 2. **Affected domains** identified in classification (auth, data, pricing, etc.)
 
-### Step 2: Evaluate Each Question
+### Step 2: Evaluate Each Question Against Code + Request
 
 For each selected question:
-1. Check if the answer is ALREADY present in the user's request or context
-2. If present → mark as resolved (no need to ask)
-3. If absent → add to gaps list with severity
+1. Check if the answer is present in: (a) the user's request, (b) the code read in Step 0, or (c) observable project conventions from the codebase
+2. If clearly answered by any of the above → mark as resolved
+3. If NOT answered → this is a real gap. **Do not guess. Do not assume a reasonable default.** Add to gaps list with severity.
+
+**Important:** "The code doesn't explicitly say" is NOT enough to skip a question. If the answer requires inventing a value, behavior, or path not present anywhere in the code or request, it IS a gap — ask it.
 
 ### Step 3: Classify Gap Severity
 
@@ -80,19 +101,28 @@ For each selected question:
 | **IMPORTANT** | Could proceed but risk of incorrect assumption | ASK before proceeding |
 | **INFORMATIONAL** | Nice to have, can proceed with reasonable default | NOTE in decision, proceed |
 
-### Step 4: Resolve Gaps (ONE at a time)
+### Step 4: Resolve Gaps (ONE at a time — ask ALL necessary questions)
 
-**CRITICAL: Ask ONE question at a time.** Do not dump a list of 5 questions.
+**CRITICAL: Ask ONE question at a time.** Do not dump a list. Do not skip.
 
-For each BLOCKER/IMPORTANT gap:
+For each BLOCKER/IMPORTANT gap — ask every single one, in sequence:
 1. Use AskUserQuestion tool
-2. Present the gap with context:
-   - What you're trying to determine
-   - Why it matters
-   - Maximum 2 options with pros/cons (if applicable)
+2. **Anchor the question to what you observed in Step 0:**
+
+   **Required format:**
+   > "Looking at `[specific file/function]`, I see `[concrete observation from the code]`.
+   > [Question about the specific gap]. [Option A] vs [Option B]?"
+
+   **Generic format to avoid:**
+   > "Data persistence strategy: where should we store this?"
+
+   If a gap cannot be anchored to a code observation (you didn't read the relevant file), go back and read it before asking.
+
 3. Wait for answer
 4. Record answer
-5. Move to next gap
+5. Continue to the next gap — **do not stop after one question if more gaps remain**
+
+**You must ask ALL BLOCKER and IMPORTANT gaps before the pipeline can proceed. There is no limit on the number of questions — ask as many as needed.**
 
 ### Step 5: Output Decision
 
@@ -181,7 +211,8 @@ These questions are ADDED when the classification identifies these domains:
 4. **BLOCKER = BLOCK** — Pipeline MUST NOT proceed with unresolved blockers
 5. **Already answered = skip** — Don't re-ask what's in the request
 6. **Record everything** — All answers become part of the pipeline context
-7. **Anti-invention** — This gate EXISTS to prevent invention. If you're unsure whether something is a gap, it IS a gap.
+7. **Anti-invention** — This gate EXISTS to prevent invention. Every unanswered gap MUST be asked before the pipeline proceeds — no silent defaults, no "reasonable assumptions", no invented values. Reading the code first (Step 0) helps identify which questions the code already answers, so the remaining questions are real and specific. But those remaining questions are ALL mandatory.
+8. **No limit on questions** — Ask as many questions as there are real gaps. The goal is zero invention, not fewer questions.
 
 ---
 

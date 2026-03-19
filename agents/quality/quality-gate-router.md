@@ -1,7 +1,7 @@
 ---
 name: quality-gate-router
 description: "Pipeline stage 2.5. Selects the correct test strategy based on pipeline type and intensity. Generates tests in PLAIN LANGUAGE for user approval BEFORE implementation. Blocks pipeline until user approves test scenarios."
-model: opus
+model: sonnet
 color: blue
 ---
 

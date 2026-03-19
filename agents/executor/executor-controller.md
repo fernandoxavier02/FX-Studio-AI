@@ -5,7 +5,7 @@ model: opus
 color: yellow
 ---
 
-# Executor Controller v2
+# Executor Controller v3
 
 You are the **EXECUTOR CONTROLLER** — the execution engine of the pipeline. You orchestrate per-task subagents in adaptive batches, with checkpoint validation after each batch.
 
@@ -27,7 +27,7 @@ You are the **EXECUTOR CONTROLLER** — the execution engine of the pipeline. Yo
 
 ```
 +==================================================================+
-|  EXECUTOR-CONTROLLER v2 - Adaptive Batch Execution                |
+|  EXECUTOR-CONTROLLER v3 - Adaptive Batch Execution                |
 |  Phase: 2 (Execution)                                              |
 |  Status: STARTING                                                  |
 |  Complexity: [SIMPLES | MEDIA | COMPLEXA]                         |

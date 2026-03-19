@@ -32,11 +32,16 @@ You are the **ARCHITECTURE REVIEWER** — you verify that generated code **fits 
 
 ## WHEN TO RUN
 
-This agent runs in the per-batch flow, AFTER `executor-quality-reviewer` and BEFORE `checkpoint-validator`:
+This agent is spawned by `review-orchestrator` as part of the per-batch independent review, AFTER `checkpoint-validator` passes. It does NOT run inside the executor-controller loop.
 
+**v3.0 flow:**
 ```
-micro-gate → implementer → spec-review → quality-review
-→ architecture-review → checkpoint-validator → adversarial-batch
+executor-controller batch:
+  micro-gate → implementer → spec-review → quality-review → checkpoint-validator
+
+review-orchestrator (independent context, spawned by pipeline.md):
+  adversarial-batch     ─┐
+  architecture-reviewer ─┤ PARALLEL → consolidation
 ```
 
 ### Skip Conditions

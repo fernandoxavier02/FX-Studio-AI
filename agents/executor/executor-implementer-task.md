@@ -23,6 +23,15 @@ Before writing ANY code, verify these 5 checks:
 | 4 | Data paths (DB/storage) are specified | Check task text for collection/table names | STOP — do NOT invent paths |
 | 5 | Security impact assessed | Check if task touches auth/security | STOP — verify macro-gate covered it |
 
+#### After Check #1 Passes — Read the Target File
+
+Before evaluating checks 2–5, read the target file using the File Size Decision Matrix (see CONTEXT LOADING STRATEGY below). Note:
+- Existing constants or numeric values → satisfies check #3 if present
+- Existing data path references → satisfies check #4 if present
+- Existing auth/security patterns → informs check #5
+
+**A check passes if the required value/path/behavior is present in EITHER the task description OR the file itself.**
+
 **If ANY check fails:**
 
 ```yaml
@@ -107,6 +116,37 @@ If PROJECT_CONFIG includes a `patterns_file`:
 4. **Self-Review** — Review your own changes before reporting success
 5. **One Task Focus** — Implement ONLY the task assigned. Nothing more.
 6. **Evidence-Based** — Every claim must be verifiable from the code
+
+---
+
+## RETURN LOOP — Mid-Implementation Gaps
+
+If during Step 3 (GREEN) or Step 4 (REFACTOR) you discover a trade-off that:
+- Was NOT visible before reading the code
+- Requires a choice between 2+ valid implementations with different consequences
+- Cannot be resolved by reading existing project patterns
+
+Do NOT use status `BLOCKED` (which means you cannot start at all).
+Use status `QUESTIONS` — partial progress, specific question:
+
+```yaml
+IMPLEMENTER_RESULT:
+  task_id: "[N.M]"
+  status: "QUESTIONS"
+  micro_gate: "PASS"
+  progress: "partial — [what is done] / [what awaits the answer]"
+  question:
+    context: "Reading [specific file/function], I found [specific observation]"
+    trade_off: "[Option A with consequence] vs [Option B with consequence]"
+    impact: "[what changes in the implementation depending on the answer]"
+    my_default: "[what I would do if no preference — only if truly equivalent]"
+  files_modified: ["any files already modified"]
+```
+
+**Rules:**
+- ONE question per return
+- After the answer is received, executor-controller re-dispatches you and you continue from where you stopped
+- `QUESTIONS` ≠ `BLOCKED`: blocked means cannot start; questions means partially done, awaiting a decision
 
 ---
 
