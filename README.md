@@ -152,15 +152,40 @@ Phase 3: GO
 
 ## Install in 30 Seconds
 
-**Step 1 -- Clone the plugin:**
+**Just one step.** Add this to your `~/.claude/settings.json` (create the file if it doesn't exist):
+
+```jsonc
+{
+  "extraKnownMarketplaces": {
+    "FX-studio-AI": {
+      "source": {
+        "source": "github",
+        "repo": "fernandoxavier02/Pipeline-Orchestrator"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "pipeline-orchestrator@FX-studio-AI": true
+  }
+}
+```
+
+> If you already have `enabledPlugins` or other fields, merge the entries -- don't replace the whole file.
+
+**Restart Claude Code.** Type `/pipeline` to verify it loaded.
+
+**That's it.** No cloning. No API keys. No runtime dependencies. Claude Code fetches the plugin from GitHub automatically.
+
+<details>
+<summary><strong>Alternative: install from a local clone (for contributors / offline use)</strong></summary>
+
+**Step 1 -- Clone:**
 
 ```bash
 git clone https://github.com/fernandoxavier02/Pipeline-Orchestrator.git ~/.claude/plugins/pipeline-orchestrator
 ```
 
-**Step 2 -- Register the marketplace and enable the plugin:**
-
-Add this to your `~/.claude/settings.json` (create the file if it doesn't exist):
+**Step 2 -- Add to `~/.claude/settings.json` using the directory source:**
 
 ```jsonc
 {
@@ -178,11 +203,9 @@ Add this to your `~/.claude/settings.json` (create the file if it doesn't exist)
 }
 ```
 
-> If you already have `enabledPlugins` or other fields, merge the entries -- don't replace the whole file.
+This reads from your local clone — useful when actively developing or modifying the plugin.
 
-**Step 3 -- Restart Claude Code.** Type `/pipeline` to verify it loaded.
-
-**That's it.** No API keys. No runtime dependencies. Pure markdown -- the pipeline auto-detects your build commands from `package.json`, `Makefile`, `Cargo.toml`, or `pyproject.toml`.
+</details>
 
 ---
 
