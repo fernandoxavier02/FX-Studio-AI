@@ -31,6 +31,7 @@ Single-command multi-agent pipeline that auto-classifies tasks, executes in adap
 | Continue | `/pipeline continue` | Resume from Phase 2 |
 | Force level | `/pipeline --simples\|--media\|--complexa [task]` | Override classification |
 | Grill | `/pipeline --grill [task]` | Force design interrogation for any complexity |
+| Plan | `/pipeline --plan [task]` | Force implementation planning for any complexity |
 | Hotfix | `/pipeline --hotfix [task]` | Emergency bypass with reduced validation for production incidents |
 | Review-only | `/pipeline review-only` | Final adversarial review on current uncommitted changes |
 
@@ -43,6 +44,9 @@ Phase 0: Automatic Triage
 
 Phase 1: Proposal + Confirmation
   Present classification → user confirms (yes/no/adjust)
+
+Phase 1.5: Implementation Planning (Conditional)
+  plan-architect (COMPLEXA auto | --plan flag) → EnterPlanMode → plan → approve
 
 Phase 2: Batch Execution
   TDD: quality-gate-router → pre-tester (RED)
@@ -98,6 +102,7 @@ SIMPLES tasks use DIRETO (direct execution without pipeline).
 - **Stop rule:** 2 consecutive build/test failures → pipeline stops
 - **Non-invention:** never guesses missing information — asks the user
 - **Design interrogation:** walks design decision tree for COMPLEXA tasks (or `--grill`), resolving trade-offs before implementation
+- **Implementation planning:** plan-architect enters read-only Plan Mode for COMPLEXA tasks (or `--plan`), creating a structured blueprint before any code is written
 
 ## Requirements
 

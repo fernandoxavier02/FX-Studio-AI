@@ -1,6 +1,6 @@
 ---
 description: "Single-command multi-agent pipeline. Auto-classifies tasks, confirms with user, executes in adaptive batches with TDD, context-independent adversarial review with user gates, final adversarial team (3 parallel agents), and Go/No-Go validation. Modes: FULL | DIAGNOSTIC | CONTINUE | REVIEW-ONLY | --force-level | --hotfix."
-allowed-tools: Task, Read, Write, Bash, Glob, Grep, TodoWrite, AskUserQuestion
+allowed-tools: Task, Read, Write, Bash, Glob, Grep, TodoWrite, AskUserQuestion, EnterPlanMode, ExitPlanMode
 ---
 
 You are the **PIPELINE CONTROLLER v3** — a single-command orchestrator for automated multi-agent execution with TDD, batch processing, context-independent adversarial review, and final adversarial team.
@@ -39,6 +39,13 @@ Every agent in this pipeline follows these 5 principles:
 +------------------------------------------------------------------+
 |  PHASE 1: PROPOSAL + CONFIRMATION                                 |
 |  Present classification -> user confirms                          |
++------------------------------------------------------------------+
+                                |
+                                v
++------------------------------------------------------------------+
+|  PHASE 1.5: PLANNING (Conditional)                                |
+|  plan-architect (COMPLEXA or --plan) -> EnterPlanMode             |
+|  -> research codebase -> generate plan -> user approves           |
 +------------------------------------------------------------------+
                                 |
                                 v
@@ -92,6 +99,7 @@ Analyze `<arguments>` to determine mode:
 | `/pipeline --complexa [task]` | FULL + force COMPLEXA | Override classification |
 | `/pipeline --hotfix [task]` | **HOTFIX** | Emergency bypass for production incidents |
 | `/pipeline --grill [task]` | FULL + design interrogation | Force design-interrogator for any complexity |
+| `/pipeline --plan [task]` | FULL + plan mode | Force plan-architect for any complexity |
 | `/pipeline review-only` | **REVIEW-ONLY** | Runs final adversarial review on current uncommitted changes |
 
 ### REVIEW-ONLY Mode
@@ -287,6 +295,7 @@ Present the PIPELINE PROPOSAL to the user:
 ║  Pipeline: [variant name]                                         ║
 ║  Info-Gate: [CLEAR | RESOLVED (N gaps)]                           ║
 ║  Design Review: [N decisions | SKIPPED]                           ║
+║  Plan Mode: [auto | --plan | SKIPPED]                             ║
 ║  Affected files: [list]                                           ║
 ║  Batch size: [all | 2-3 | 1]                                     ║
 ╚══════════════════════════════════════════════════════════════════╝
@@ -312,6 +321,46 @@ Ask via AskUserQuestion: **"Confirm this pipeline? (yes / no / adjust)"**
 |  To continue: /pipeline continue                                   |
 +==================================================================+
 ```
+
+---
+
+### Phase 1.5: Implementation Planning (Conditional)
+
+```
++==================================================================+
+|  PIPELINE PROGRESS                                                |
+|  Phase: 1.5/3 PLANNING                                           |
+|  Status: PLAN MODE (read-only)                                    |
+|  Action: Researching codebase and generating implementation plan  |
++==================================================================+
+```
+
+**Trigger conditions:**
+- **Automatic:** complexity == COMPLEXA
+- **Flag:** `--plan` was specified (any complexity)
+- **Skip:** SIMPLES or MEDIA without `--plan`
+
+If triggered, spawn `plan-architect` agent (model: sonnet).
+
+**Pass:**
+- CLASSIFICATION from Phase 0a
+- INFORMATION_GATE from Phase 0b
+- DESIGN_INTERROGATION from Phase 0c (if run)
+- PIPELINE_DOC_PATH
+- PROJECT_CONFIG
+
+**Expected output:** IMPLEMENTATION_PLAN with:
+- status: APPROVED | ADJUSTED | REJECTED
+- task_order: [ordered list of implementation tasks]
+- files_to_create: [list]
+- files_to_modify: [list with line ranges]
+- risks: [identified risks with mitigation]
+
+**The plan-architect enters Plan Mode (read-only), researches the codebase, generates a structured plan, and presents it to the user for approval.** The approved plan becomes the blueprint for executor-controller.
+
+**If REJECTED:** Pipeline returns to Phase 1 for re-classification or exits.
+
+**Pass approved plan to Phase 2:** The IMPLEMENTATION_PLAN is passed to executor-controller, which uses it to determine task order, file targets, and batch composition.
 
 ---
 
@@ -356,6 +405,7 @@ Spawn `executor-controller` (model: opus).
 
 **Pass:**
 - All context from previous phases
+- IMPLEMENTATION_PLAN from Phase 1.5 (if run) — use as task blueprint
 - PIPELINE_DOC_PATH
 - PROJECT_CONFIG
 - Complexity level (determines batch sizing)
@@ -599,6 +649,7 @@ Grep: `Grep -A 10 "Pipeline Routing Matrix" references/complexity-matrix.md`
 | ADVERSARIAL_BLOCK | Critical findings | Fix loop (max 3) | Fix or escalate |
 | STOP_RULE | 2 consecutive failures | **STOP pipeline** | Escalate to user |
 | FIX_LOOP_EXHAUSTED | 3 fix attempts failed | **STOP pipeline** | Propose alternatives |
+| PLAN_REJECTED | User rejects implementation plan | **RETURN** to Phase 1 | Re-classify or exit |
 | ADVERSARIAL_GATE | Post-checkpoint per batch | **ASK** user (yes/skip/adjust) | Must approve/skip |
 | ADVERSARIAL_GATE_MANDATORY | Batch touches auth/crypto/data | **BLOCK** — cannot skip | Must approve |
 | FINAL_ADVERSARIAL_GATE | Post-sanity, pre-validator | **ASK** user (recommended) | Must approve/skip |
@@ -661,6 +712,7 @@ Every agent saves their phase file to PIPELINE_DOC_PATH:
 |  Results by Phase:                                                 |
 |    0. Triage:       [status]                                       |
 |       Design:      [N decisions | SKIPPED]                        |
+|       Plan:        [N tasks planned | SKIPPED]                    |
 |    1. Proposal:     [CONFIRMED]                                    |
 |    2. Execution:    [status]                                       |
 |    3. Closure:      [status]                                       |

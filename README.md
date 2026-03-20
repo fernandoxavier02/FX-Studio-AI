@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/Claude_Code-Plugin-7C3AED?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTEyIDJMNiA3djEwbDYgNSA2LTVWN3oiLz48L3N2Zz4=" alt="Claude Code Plugin">
   <img src="https://img.shields.io/badge/version-3.0.1-blue?style=for-the-badge" alt="Version 3.0.1">
   <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License">
-  <img src="https://img.shields.io/badge/agents-18-orange?style=for-the-badge" alt="18 Agents">
+  <img src="https://img.shields.io/badge/agents-19-orange?style=for-the-badge" alt="19 Agents">
   <img src="https://img.shields.io/badge/dependencies-zero-black?style=for-the-badge" alt="Zero Dependencies">
 </p>
 
@@ -20,7 +20,7 @@
   Pipeline Orchestrator adds the discipline: TDD, security review,<br>
   architecture conformance, and evidence-based validation --<br>
   so you can trust what AI builds for you.<br><br>
-  <em>One command. Eighteen agents. Every claim backed by proof.</em>
+  <em>One command. Nineteen agents. Every claim backed by proof.</em>
 </p>
 
 <p align="center">
@@ -279,7 +279,7 @@ The pipeline doesn't treat a typo fix like a database migration. Rigor scales au
 
 ---
 
-## The 18 Agents
+## The 19 Agents
 
 Every agent has one job. No agent guesses. If information is missing, the pipeline **stops and asks**.
 
@@ -315,11 +315,12 @@ Every agent has one job. No agent guesses. If information is missing, the pipeli
 </td>
 <td width="33%" valign="top">
 
-### Quality (6)
+### Quality (7)
 
 | Agent | Role |
 |:------|:-----|
 | **design-interrogator** | Stress-tests design decisions |
+| **plan-architect** | Creates implementation blueprint |
 | **quality-gate-router** | Designs test scenarios |
 | **pre-tester** | Writes tests (RED) |
 | **architecture-reviewer** | Pattern conformance |
@@ -335,6 +336,8 @@ Every agent has one job. No agent guesses. If information is missing, the pipeli
 > **New in v3.0:** `review-orchestrator` and `final-adversarial-orchestrator` move adversarial review completely out of the executor — reviewers now receive **zero implementation context**, eliminating the implicit bias of an agent reviewing its own work.
 
 > **New:** `design-interrogator` walks the design decision tree before implementation. Auto-triggers for COMPLEXA tasks, or use `--grill` to force it on any complexity. Self-answers from the codebase when possible, only asking the user for genuine trade-offs.
+
+> **New:** `plan-architect` enters Plan Mode (read-only) to research the codebase and create a structured implementation plan before any code is written. Auto for COMPLEXA, use `--plan` for any complexity.
 
 ---
 
@@ -575,6 +578,9 @@ references/complexity-matrix.md
 
 # Stress-test design decisions before writing code
 /pipeline --grill add real-time notifications to the dashboard
+
+# Read-only planning before implementation
+/pipeline --plan refactor the notification system
 
 # Production on fire? Emergency mode with streamlined gates
 /pipeline --hotfix users can't login since last deploy
