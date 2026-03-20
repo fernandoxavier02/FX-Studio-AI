@@ -32,6 +32,7 @@ Every agent in this pipeline follows these 5 principles:
 +------------------------------------------------------------------+
 |  PHASE 0: AUTOMATIC TRIAGE                                        |
 |  task-orchestrator -> information-gate                             |
+|  -> design-interrogator (COMPLEXA or --grill)                     |
 +------------------------------------------------------------------+
                                 |
                                 v
@@ -90,6 +91,7 @@ Analyze `<arguments>` to determine mode:
 | `/pipeline --media [task]` | FULL + force MEDIA | Override classification |
 | `/pipeline --complexa [task]` | FULL + force COMPLEXA | Override classification |
 | `/pipeline --hotfix [task]` | **HOTFIX** | Emergency bypass for production incidents |
+| `/pipeline --grill [task]` | FULL + design interrogation | Force design-interrogator for any complexity |
 | `/pipeline review-only` | **REVIEW-ONLY** | Runs final adversarial review on current uncommitted changes |
 
 ### REVIEW-ONLY Mode
@@ -198,6 +200,7 @@ Pass this EXACT path to ALL agents. Every agent saves to `{PIPELINE_DOC_PATH}/0N
 |  Phase: 0/3 AUTOMATIC TRIAGE                                      |
 |  Status: STARTING                                                  |
 |  Agents: task-orchestrator -> information-gate                     |
+|  Conditional: -> design-interrogator (COMPLEXA or --grill)        |
 +==================================================================+
 ```
 
@@ -229,11 +232,35 @@ Spawn `information-gate` agent (model: sonnet).
 - CLASSIFICATION from Phase 0a
 - PIPELINE_DOC_PATH
 
-**Expected output:** GATE_RESULT with:
+**Expected output:** INFORMATION_GATE with:
 - status: CLEAR | RESOLVED | BLOCKED
 - lacunas: [list of gaps found and resolved]
 
 **BLOCK:** If status is BLOCKED → pipeline cannot proceed. Report to user.
+
+#### Phase 0c: Design Interrogation (Conditional)
+
+**Trigger conditions:**
+- **Automatic:** complexity == COMPLEXA
+- **Flag:** `--grill` was specified (any complexity)
+- **Skip:** SIMPLES or MEDIA without `--grill`
+
+If triggered, spawn `design-interrogator` agent (model: sonnet).
+
+**Pass:**
+- CLASSIFICATION from Phase 0a
+- INFORMATION_GATE from Phase 0b
+- PIPELINE_DOC_PATH
+- PROJECT_CONFIG
+
+**Expected output:** DESIGN_INTERROGATION with:
+- status: RESOLVED | PARTIAL
+- decisions: [list of design decisions with rationale]
+- design_summary: [2-3 sentence summary]
+
+**The design-interrogator walks the decision tree ONE question at a time, providing a recommended answer for each.** It self-answers from the codebase when possible, only asking the user for genuine trade-offs.
+
+**Note:** This agent does NOT block the pipeline on PARTIAL status — it documents unresolved decisions and proceeds. The information-gate handles hard blocks; the design-interrogator handles design clarity.
 
 ---
 
@@ -259,6 +286,7 @@ Present the PIPELINE PROPOSAL to the user:
 ║  Complexity: [SIMPLES | MEDIA | COMPLEXA]                        ║
 ║  Pipeline: [variant name]                                         ║
 ║  Info-Gate: [CLEAR | RESOLVED (N gaps)]                           ║
+║  Design Review: [N decisions | SKIPPED]                           ║
 ║  Affected files: [list]                                           ║
 ║  Batch size: [all | 2-3 | 1]                                     ║
 ╚══════════════════════════════════════════════════════════════════╝
@@ -308,7 +336,7 @@ Read `references/pipelines/{variant}.md` to get:
 
 #### Step 2b: TDD Phase (if pipeline includes TDD steps)
 
-**Quality Gate Router** (model: opus):
+**Quality Gate Router** (model: sonnet):
 - Generate test scenarios in PLAIN LANGUAGE
 - Present to user via AskUserQuestion ONE at a time
 - **BLOCK** until user approves all test scenarios
@@ -632,6 +660,7 @@ Every agent saves their phase file to PIPELINE_DOC_PATH:
 |    Cross-batch issues: [N]                                        |
 |  Results by Phase:                                                 |
 |    0. Triage:       [status]                                       |
+|       Design:      [N decisions | SKIPPED]                        |
 |    1. Proposal:     [CONFIRMED]                                    |
 |    2. Execution:    [status]                                       |
 |    3. Closure:      [status]                                       |

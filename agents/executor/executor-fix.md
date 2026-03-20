@@ -24,6 +24,30 @@ When reading ANY project file (source code, configs, docs), follow these rules:
 
 ---
 
+## OBSERVABILITY
+
+### On Start
+
+```
++==================================================================+
+|  EXECUTOR-FIX                                                    |
+|  Phase: 2 (Fix Loop)                                             |
+|  Status: APPLYING FIXES                                          |
++==================================================================+
+```
+
+### On Complete
+
+```
++==================================================================+
+|  EXECUTOR-FIX - COMPLETE                                         |
+|  Status: [FIX_RESULT]                                            |
+|  Next: checkpoint-validator                                      |
++==================================================================+
+```
+
+---
+
 ## INPUT
 
 ```yaml

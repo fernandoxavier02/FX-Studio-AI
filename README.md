@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/Claude_Code-Plugin-7C3AED?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTEyIDJMNiA3djEwbDYgNSA2LTVWN3oiLz48L3N2Zz4=" alt="Claude Code Plugin">
   <img src="https://img.shields.io/badge/version-3.0.1-blue?style=for-the-badge" alt="Version 3.0.1">
   <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License">
-  <img src="https://img.shields.io/badge/agents-17-orange?style=for-the-badge" alt="17 Agents">
+  <img src="https://img.shields.io/badge/agents-18-orange?style=for-the-badge" alt="18 Agents">
   <img src="https://img.shields.io/badge/dependencies-zero-black?style=for-the-badge" alt="Zero Dependencies">
 </p>
 
@@ -20,7 +20,7 @@
   Pipeline Orchestrator adds the discipline: TDD, security review,<br>
   architecture conformance, and evidence-based validation --<br>
   so you can trust what AI builds for you.<br><br>
-  <em>One command. Seventeen agents. Every claim backed by proof.</em>
+  <em>One command. Eighteen agents. Every claim backed by proof.</em>
 </p>
 
 <p align="center">
@@ -279,7 +279,7 @@ The pipeline doesn't treat a typo fix like a database migration. Rigor scales au
 
 ---
 
-## The 17 Agents
+## The 18 Agents
 
 Every agent has one job. No agent guesses. If information is missing, the pipeline **stops and asks**.
 
@@ -315,10 +315,11 @@ Every agent has one job. No agent guesses. If information is missing, the pipeli
 </td>
 <td width="33%" valign="top">
 
-### Quality (5)
+### Quality (6)
 
 | Agent | Role |
 |:------|:-----|
+| **design-interrogator** | Stress-tests design decisions |
 | **quality-gate-router** | Designs test scenarios |
 | **pre-tester** | Writes tests (RED) |
 | **architecture-reviewer** | Pattern conformance |
@@ -332,6 +333,8 @@ Every agent has one job. No agent guesses. If information is missing, the pipeli
 > **New in v2.2:** `executor-fix` is a dedicated agent (previously inline in executor-controller). It runs with fresh context, strict write-scope restrictions, and must use a different approach on attempt 3.
 
 > **New in v3.0:** `review-orchestrator` and `final-adversarial-orchestrator` move adversarial review completely out of the executor — reviewers now receive **zero implementation context**, eliminating the implicit bias of an agent reviewing its own work.
+
+> **New:** `design-interrogator` walks the design decision tree before implementation. Auto-triggers for COMPLEXA tasks, or use `--grill` to force it on any complexity. Self-answers from the codebase when possible, only asking the user for genuine trade-offs.
 
 ---
 
@@ -569,6 +572,9 @@ references/complexity-matrix.md
 
 # Override complexity when you know better
 /pipeline --complexa redesign the entire auth module
+
+# Stress-test design decisions before writing code
+/pipeline --grill add real-time notifications to the dashboard
 
 # Production on fire? Emergency mode with streamlined gates
 /pipeline --hotfix users can't login since last deploy
@@ -825,8 +831,56 @@ See the [Adapter Guide](docs/adapter-guide.md) for migration details.
 
 ## Requirements
 
-- [Claude Code](https://claude.ai/code) CLI
-- That's it. Zero runtime dependencies. Pure markdown.
+- [Claude Code](https://claude.ai/code) CLI (v1.0+)
+- **git** in PATH (required for `/pipeline review-only` mode)
+- **bash** shell available (macOS/Linux native, Windows via Git Bash or WSL)
+- Zero runtime dependencies. Pure markdown plugin.
+
+---
+
+## Troubleshooting
+
+<details>
+<summary><strong>/pipeline doesn't work after install</strong></summary>
+
+1. Verify plugin is enabled: check `~/.claude/settings.json` has `"pipeline-orchestrator@FX-studio-AI": true` under `enabledPlugins`
+2. Restart Claude Code completely (close and reopen)
+3. Check for JSON syntax errors in settings.json (trailing commas, missing brackets)
+4. On Windows, use forward slashes or double backslashes in paths
+</details>
+
+<details>
+<summary><strong>Pipeline can't find build/test commands</strong></summary>
+
+The pipeline auto-detects from `package.json`, `Makefile`, `Cargo.toml`, or `pyproject.toml`. If your project uses a non-standard setup:
+
+1. Create `.claude/pipeline.local.md` in your project root
+2. Add YAML frontmatter with your commands:
+```yaml
+---
+build_command: "your-build-command"
+test_command: "your-test-command"
+---
+```
+See the [Adapter Guide](docs/adapter-guide.md) for examples in Python, Rust, Go, and Node.js.
+</details>
+
+<details>
+<summary><strong>Pipeline stops with "2 consecutive failures"</strong></summary>
+
+This is the **Stop Rule** — a safety mechanism. Common causes:
+- Missing dependencies (run your install command first)
+- Wrong Node/Python version
+- Database not running for integration tests
+
+Fix the underlying issue, then resume with `/pipeline continue`.
+</details>
+
+<details>
+<summary><strong>Information-gate keeps asking questions</strong></summary>
+
+The information-gate asks questions to prevent the pipeline from guessing. If you don't know the answer, say so — the pipeline will document the gap and may proceed with reduced scope. You can also say "use the existing pattern" to let it self-answer from your codebase.
+</details>
 
 ---
 

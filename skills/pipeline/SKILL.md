@@ -30,6 +30,8 @@ Single-command multi-agent pipeline that auto-classifies tasks, executes in adap
 | Diagnostic | `/pipeline diagnostic [task]` | Classification + proposal only |
 | Continue | `/pipeline continue` | Resume from Phase 2 |
 | Force level | `/pipeline --simples\|--media\|--complexa [task]` | Override classification |
+| Grill | `/pipeline --grill [task]` | Force design interrogation for any complexity |
+| Hotfix | `/pipeline --hotfix [task]` | Emergency bypass with reduced validation for production incidents |
 | Review-only | `/pipeline review-only` | Final adversarial review on current uncommitted changes |
 
 ## Pipeline Phases
@@ -37,6 +39,7 @@ Single-command multi-agent pipeline that auto-classifies tasks, executes in adap
 ```
 Phase 0: Automatic Triage
   task-orchestrator (classify) → information-gate (detect gaps)
+  → design-interrogator (COMPLEXA auto | --grill flag)
 
 Phase 1: Proposal + Confirmation
   Present classification → user confirms (yes/no/adjust)
@@ -94,3 +97,12 @@ SIMPLES tasks use DIRETO (direct execution without pipeline).
 - **Fix loop cap:** max 3 attempts, 3rd must use different approach, then escalates
 - **Stop rule:** 2 consecutive build/test failures → pipeline stops
 - **Non-invention:** never guesses missing information — asks the user
+- **Design interrogation:** walks design decision tree for COMPLEXA tasks (or `--grill`), resolving trade-offs before implementation
+
+## Requirements
+
+- **Claude Code** v1.0+ (CLI)
+- **git** required for `/pipeline review-only` mode
+- **bash** shell available in PATH
+- Works on: macOS, Linux, Windows (WSL or Git Bash)
+- No runtime dependencies — pure markdown plugin

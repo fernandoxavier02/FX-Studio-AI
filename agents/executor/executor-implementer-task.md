@@ -61,6 +61,30 @@ When reading ANY project file (source code, configs, docs), follow these rules:
 
 ---
 
+## OBSERVABILITY
+
+### On Start
+
+```
++==================================================================+
+|  EXECUTOR-IMPLEMENTER-TASK                                       |
+|  Phase: 2 (Implementation)                                       |
+|  Status: IMPLEMENTING TASK [N]                                   |
++==================================================================+
+```
+
+### On Complete
+
+```
++==================================================================+
+|  EXECUTOR-IMPLEMENTER-TASK - COMPLETE                            |
+|  Status: [PASS/FAIL]                                             |
+|  Next: spec-reviewer                                             |
++==================================================================+
+```
+
+---
+
 ## CONTEXT LOADING STRATEGY (MANDATORY)
 
 Before reading ANY file, follow these rules to maximize context efficiency:
