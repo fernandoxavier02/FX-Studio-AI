@@ -96,17 +96,24 @@ The hardness level of each gate is FIXED and does not vary by complexity. What v
 | STOP_RULE | CIRCUIT_BREAKER | Always | Always | Always |
 | FIX_LOOP_EXHAUSTED | CIRCUIT_BREAKER | Always | Always | Always |
 | STALE_CONTEXT | SOFT | Always (continue mode) | Always (continue mode) | Always (continue mode) |
+| MICRO_GATE_GAP | HARD | Always | Always | Always |
+| CHECKPOINT_FAIL | HARD | Always | Always | Always |
+| ADVERSARIAL_BLOCK | HARD | Always | Always | Always |
 | ADVERSARIAL_GATE | SOFT | Skippable | Skippable | Skippable |
 | FINAL_ADVERSARIAL_GATE | SOFT | Recommended | Recommended | Strongly recommended |
+| FINAL_ADVERSARIAL_REWORK | HARD | If critical findings | If critical findings | If critical findings |
+| CLOSEOUT_CONFIRM | SOFT | Always | Always | Always |
 
 ---
 
 ## Confidence Score Thresholds
 
-| Zone | Score Range | Typical Decision |
-|------|-------------|------------------|
-| HIGH | >= 0.80 | GO (if all checks pass) |
-| MEDIUM | 0.60 - 0.79 | CONDITIONAL (review skipped gates) |
-| LOW | < 0.60 | NO-GO (investigate root cause) |
+| Zone | Score Range | Advisory Signal |
+|------|-------------|-----------------|
+| HIGH | >= 0.80 | High confidence — no score-related concerns |
+| MEDIUM | 0.60 - 0.79 | Moderate confidence — review skipped gates and dimension breakdown |
+| LOW | < 0.60 | Low confidence — investigate root cause, but does NOT force any decision |
 
-The confidence score is ADVISORY — it informs the final-validator but does not override binary PASS/FAIL checks.
+**Zone naming convention:** Use `HIGH` / `MEDIUM` / `LOW` in all contexts (pipeline output, PA_DE_CAL YAML, documentation). These are advisory labels, not decision outcomes. The PA_DE_CAL `zone` field in the YAML output uses these same names.
+
+The confidence score is PURELY ADVISORY — it informs the final-validator but NEVER overrides binary PASS/FAIL checks. Thresholds are soft guidelines, not mandatory gates.
