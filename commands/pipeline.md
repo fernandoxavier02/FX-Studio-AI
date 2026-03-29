@@ -329,6 +329,10 @@ Ask via AskUserQuestion: **"Confirm this pipeline? (yes / no / adjust)"**
 
 ---
 
+**PHASE TRANSITION 1 → 1.5:** Emit Phase Transition Summary block. Carry forward: CLASSIFICATION, INFORMATION_GATE, user confirmation. Log any gate decisions from Phase 1.
+
+---
+
 ### Phase 1.5: Implementation Planning (Conditional)
 
 ```
@@ -825,7 +829,9 @@ When `final-adversarial-orchestrator` reports CRITICAL findings:
 +==================================================================+
 ```
 
-If user chooses (A):
+**Iteration cap:** Option (A) can be chosen **at most 1 time**. If CRITICAL findings persist after the rework pass, option (A) is suppressed — only (B) and (C) are available. This prevents unbounded Phase 3→2→3 cycling, consistent with the 3-attempt cap on ADVERSARIAL_BLOCK and FIX_LOOP_EXHAUSTED.
+
+If user chooses (A) (first and only rework pass):
 1. Spawn `executor-fix` with critical findings
 2. Re-run `checkpoint-validator`
 3. Re-run `sanity-checker`
@@ -834,6 +840,7 @@ If user chooses (A):
 **Stale context detection for `/pipeline continue`:**
 
 When CONTINUE mode is detected:
+0. **Discover PIPELINE_DOC_PATH:** Glob `{doc_path}/Pre-*-action/*/` and select the most recently modified subfolder. If no folder is found, CONTINUE mode cannot proceed — report error and suggest running `/pipeline [task]` instead
 1. Read `{PIPELINE_DOC_PATH}/gate-decisions.jsonl` for last timestamp
 2. **If file does not exist:** Treat as maximum staleness — trigger STALE_CONTEXT gate unconditionally (fail-closed)
 3. If last entry is >24 hours old, trigger STALE_CONTEXT gate
