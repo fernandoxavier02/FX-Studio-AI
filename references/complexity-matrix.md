@@ -77,3 +77,36 @@ DIRETO = Direct execution without pipeline (build + test only, max 2 files, < 30
 2. Final gate: Show AFTER sanity-checker, BEFORE final-validator
 3. Always show token cost estimate for final review
 4. Always show as "RECOMMENDED" or "STRONGLY RECOMMENDED" — never hide
+
+---
+
+## Gate Hardness by Complexity
+
+**SSOT for gate hardness taxonomy:** `commands/pipeline.md` section "Gate Hardness Taxonomy"
+
+The hardness level of each gate is FIXED and does not vary by complexity. What varies is whether the gate is triggered:
+
+| Gate | Hardness | SIMPLES | MEDIA | COMPLEXA |
+|------|----------|---------|-------|----------|
+| SSOT_CONFLICT | MANDATORY | Always | Always | Always |
+| ADVERSARIAL_GATE_MANDATORY | MANDATORY | If domain touched | If domain touched | If domain touched |
+| INFO_GATE_BLOCKED | HARD | Always | Always | Always |
+| TDD_APPROVAL | HARD | Always | Always | Always |
+| PLAN_REJECTED | HARD | N/A (no plan) | If --plan | Always |
+| STOP_RULE | CIRCUIT_BREAKER | Always | Always | Always |
+| FIX_LOOP_EXHAUSTED | CIRCUIT_BREAKER | Always | Always | Always |
+| STALE_CONTEXT | SOFT | Always (continue mode) | Always (continue mode) | Always (continue mode) |
+| ADVERSARIAL_GATE | SOFT | Skippable | Skippable | Skippable |
+| FINAL_ADVERSARIAL_GATE | SOFT | Recommended | Recommended | Strongly recommended |
+
+---
+
+## Confidence Score Thresholds
+
+| Zone | Score Range | Typical Decision |
+|------|-------------|------------------|
+| HIGH | >= 0.80 | GO (if all checks pass) |
+| MEDIUM | 0.60 - 0.79 | CONDITIONAL (review skipped gates) |
+| LOW | < 0.60 | NO-GO (investigate root cause) |
+
+The confidence score is ADVISORY — it informs the final-validator but does not override binary PASS/FAIL checks.

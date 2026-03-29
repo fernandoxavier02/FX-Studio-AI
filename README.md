@@ -5,7 +5,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/stars/fernandoxavier02/Pipeline-Orchestrator?style=for-the-badge&color=7C3AED" alt="GitHub Stars">
   <img src="https://img.shields.io/badge/Claude_Code-Plugin-7C3AED?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTEyIDJMNiA3djEwbDYgNSA2LTVWN3oiLz48L3N2Zz4=" alt="Claude Code Plugin">
-  <img src="https://img.shields.io/badge/version-3.0.2-blue?style=for-the-badge" alt="Version 3.0.2">
+  <img src="https://img.shields.io/badge/version-3.1.0-blue?style=for-the-badge" alt="Version 3.1.0">
   <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License">
   <img src="https://img.shields.io/badge/agents-19-orange?style=for-the-badge" alt="19 Agents">
   <img src="https://img.shields.io/badge/dependencies-zero-black?style=for-the-badge" alt="Zero Dependencies">
@@ -27,6 +27,9 @@
   &nbsp;&nbsp;✓&nbsp; <strong>Tests before code</strong> — always (TDD enforced, RED must fail before GREEN runs)<br>
   &nbsp;&nbsp;✓&nbsp; <strong>Asks, never guesses</strong> — reads your code first, then asks exactly what's missing<br>
   &nbsp;&nbsp;✓&nbsp; <strong>Reviewers with zero bias</strong> — adversarial agents see no implementation context<br>
+  &nbsp;&nbsp;✓&nbsp; <strong>Gate hardness</strong> — formal MANDATORY/HARD/CIRCUIT_BREAKER/SOFT taxonomy for every gate<br>
+  &nbsp;&nbsp;✓&nbsp; <strong>Confidence scoring</strong> — cumulative quality score across all phases, advisory to final decision<br>
+  &nbsp;&nbsp;✓&nbsp; <strong>Full audit trail</strong> — every gate decision logged to gate-decisions.jsonl with timestamps<br>
 </p>
 
 <p align="center">
@@ -728,6 +731,19 @@ pipeline-orchestrator/
 ---
 
 ## Changelog
+
+### v3.1.0 -- Gate Hardness, Confidence Scoring & Phase Review (2026-03-29)
+
+**New governance features for pipeline integrity and auditability:**
+
+- **Gate Hardness Taxonomy**: All 14 gates now have formal hardness levels (MANDATORY, HARD, CIRCUIT_BREAKER, SOFT). MANDATORY/HARD gates cannot be skipped; SOFT gates can be skipped but are always logged.
+- **Gate Decision Log**: Every gate trigger is appended to `gate-decisions.jsonl` (JSONL format) with gate name, hardness, phase, decision, timestamp, and confidence impact. Machine-readable audit trail.
+- **Phase Transition Summaries**: Mandatory visual summary block emitted before every phase transition (0→1, 1→2, 2→3). Shows what passed, what was skipped, gates triggered, and artifacts carried forward.
+- **Confidence Score**: Cumulative quality score (0.0-1.0) accumulated across phases. Dimensions: classification_clarity, info_completeness, design_alignment, plan_coverage, tdd_coverage, implementation_quality, gate_penalty, sanity_pass. Advisory input to final-validator.
+- **Phase Rollback Paths**: Phase 2 systemic failure can now rollback to Phase 1.5 (re-plan). Final adversarial critical findings can trigger a Phase 2 fix batch. `/pipeline continue` with >24h gap triggers STALE_CONTEXT gate.
+- **New gate: STALE_CONTEXT** (SOFT): Detects stale context when using `/pipeline continue` with >24h gap between sessions. User can re-validate from Phase 0 or proceed with warning.
+- **Final-validator enhanced**: Now reads gate-decisions.jsonl and confidence score. Skipped SOFT gates factor into GO/CONDITIONAL/NO-GO decision. PA_DE_CAL output includes confidence and gate summary.
+- **Complexity matrix updated**: Gate hardness per complexity table, confidence score thresholds documentation.
 
 ### v3.0.2 -- TDD Dispatch, Plan Mode & Adversarial Chain Fixes (2026-03-27)
 

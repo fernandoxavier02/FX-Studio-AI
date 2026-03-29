@@ -55,6 +55,26 @@ Gather outputs from every previous stage:
 | 4. Adversarial | ADVERSARIAL_REVIEW | [received or SKIPPED] |
 | 5. Sanity | SANITY_CHECK | [received] |
 
+### Step 1b: Read Gate Decision Log
+
+Read `{PIPELINE_DOC_PATH}/gate-decisions.jsonl` and analyze:
+
+1. **Count total gates triggered** and their decisions
+2. **Identify SOFT gates that were SKIPPED** — each skipped SOFT gate is a risk indicator
+3. **Check for MANDATORY/HARD gates** — these must ALL show `decision: RESOLVED | APPROVED`
+4. **Sum `confidence_impact`** — calculate total gate penalty
+
+If any MANDATORY or HARD gate shows `decision: SKIPPED` → immediate **NO-GO** (this should not happen but is a safety check).
+
+### Step 1c: Read Confidence Score
+
+If a CONFIDENCE score is available from the pipeline:
+
+1. **Check `current` score** against thresholds (>= 0.80 = GO territory, >= 0.60 = CONDITIONAL, < 0.60 = NO-GO territory)
+2. **The score is ADVISORY** — it informs your decision but does not override binary PASS/FAIL checks
+3. **If score < 0.60 but all checks pass** → issue CONDITIONAL with note about low confidence
+4. **If score >= 0.80 but a check fails** → the failing check takes precedence (NO-GO or CONDITIONAL)
+
 ### Step 2: Apply Proportional Criteria
 
 **SSOT:** `references/complexity-matrix.md` — grep for "Pa de Cal criteria" in "Proportional Behavior"
@@ -73,6 +93,8 @@ Grep: `Grep -A 2 "Pa de Cal criteria" references/complexity-matrix.md`
 |  Tests: [PASS / FAIL / SKIP]                                      |
 |  Adversarial: [PASS / WARN / FAIL / SKIP]                         |
 |  Regression: [PASS / FAIL / N/A]                                   |
+|  Confidence: [score] ([>= 0.80 | >= 0.60 | < 0.60])               |
+|  Gates: [N] total, [N] skipped (SOFT)                              |
 |                                                                    |
 |  FINAL DECISION: [GO | CONDITIONAL | NO-GO]                       |
 |  [Justification]                                                   |
@@ -130,6 +152,14 @@ PA_DE_CAL:
     tests: "[PASS | FAIL | SKIP]"
     adversarial: "[PASS | WARN | FAIL | SKIP]"
     regression: "[PASS | FAIL | N/A]"
+  confidence:
+    score: "[0.00 - 1.00]"
+    zone: "[GO | CONDITIONAL | NO_GO]"
+    gate_penalty: "[0.0 to -0.5]"
+  gate_summary:
+    total_triggered: "[N]"
+    soft_skipped: "[N]"
+    skipped_gates: ["list of skipped gate names"]
   files_modified: ["list"]
   tests_created: ["list"]
   pending_items: []  # if CONDITIONAL
