@@ -51,6 +51,20 @@
   <sub>Created by <a href="https://github.com/fernandoxavier02"><strong>Fernando Xavier</strong></a> &nbsp;|&nbsp; <a href="https://github.com/fernandoxavier02"><strong>FX Studio AI</strong></a></sub>
 </p>
 
+<br>
+
+<p align="center">
+  <img src="docs/assets/sentinel-architecture.png" alt="Sentinel Architecture" width="100%">
+</p>
+
+<p align="center">
+  <img src="docs/assets/sentinel-flow.png" alt="Sentinel Execution Flow" width="100%">
+</p>
+
+<p align="center">
+  <img src="docs/assets/sentinel-modes.png" alt="Sentinel Validation Modes" width="100%">
+</p>
+
 ---
 
 ## Why This Exists
