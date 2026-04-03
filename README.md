@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/Claude_Code-Plugin-7C3AED?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTEyIDJMNiA3djEwbDYgNSA2LTVWN3oiLz48L3N2Zz4=" alt="Claude Code Plugin">
   <img src="https://img.shields.io/badge/version-3.1.0-blue?style=for-the-badge" alt="Version 3.1.0">
   <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License">
-  <img src="https://img.shields.io/badge/agents-19-orange?style=for-the-badge" alt="19 Agents">
+  <img src="https://img.shields.io/badge/agents-20-orange?style=for-the-badge" alt="20 Agents">
   <img src="https://img.shields.io/badge/gates-16-red?style=for-the-badge" alt="16 Gates">
   <img src="https://img.shields.io/badge/dependencies-zero-black?style=for-the-badge" alt="Zero Dependencies">
 </p>
@@ -21,7 +21,7 @@
   Pipeline Orchestrator adds the discipline: TDD, security review,<br>
   architecture conformance, and evidence-based validation --<br>
   so you can trust what AI builds for you.<br><br>
-  <em>One command. Nineteen agents. Sixteen gates. Every claim backed by proof.</em>
+  <em>One command. Twenty agents. Sixteen gates. Every claim backed by proof.</em>
 </p>
 
 <p align="center">
@@ -38,7 +38,8 @@
   <a href="#30-second-demo">See it in action</a> &nbsp;&bull;&nbsp;
   <a href="#install-in-30-seconds">Install</a> &nbsp;&bull;&nbsp;
   <a href="#how-it-works">How it works</a> &nbsp;&bull;&nbsp;
-  <a href="#the-19-agents">Meet the agents</a> &nbsp;&bull;&nbsp;
+  <a href="#the-20-agents">Meet the agents</a> &nbsp;&bull;&nbsp;
+  <a href="#sentinel----pipeline-execution-guardian-v310">Sentinel</a> &nbsp;&bull;&nbsp;
   <a href="#gate-hardness-taxonomy-v31">Gate Hardness</a> &nbsp;&bull;&nbsp;
   <a href="#confidence-score-v31">Confidence Score</a> &nbsp;&bull;&nbsp;
   <a href="#independent-review-architecture-v30">Context-Safe Review</a> &nbsp;&bull;&nbsp;
@@ -290,7 +291,7 @@ The pipeline doesn't treat a typo fix like a database migration. Rigor scales au
 
 ---
 
-## The 19 Agents
+## The 20 Agents
 
 Every agent has one job. No agent guesses. If information is missing, the pipeline **stops and asks**.
 
@@ -298,12 +299,13 @@ Every agent has one job. No agent guesses. If information is missing, the pipeli
 <tr>
 <td width="33%" valign="top">
 
-### Core (7)
+### Core (8)
 
 | Agent | Role |
 |:------|:-----|
 | **task-orchestrator** | Classifies type + complexity |
 | **information-gate** | Catches knowledge gaps |
+| **sentinel** | Pipeline execution guardian |
 | **adversarial-batch** | Per-batch security review |
 | **checkpoint-validator** | Build + test proof |
 | **sanity-checker** | Final validation |
@@ -349,6 +351,8 @@ Every agent has one job. No agent guesses. If information is missing, the pipeli
 > **New:** `design-interrogator` walks the design decision tree before implementation. Auto-triggers for COMPLEXA tasks, or use `--grill` to force it on any complexity. Self-answers from the codebase when possible, only asking the user for genuine trade-offs.
 
 > **New:** `plan-architect` enters Plan Mode (read-only) to research the codebase and create a structured implementation plan before any code is written. Auto for COMPLEXA, use `--plan` for any complexity.
+
+> **New in v3.1:** `sentinel` is a real-time execution guardian. A PreToolUse hook validates every agent spawn against the expected sequence; a dedicated agent (sonnet, read-only) performs deep validation at 5 critical checkpoints. Auto-corrects deviations. See [Sentinel section](#sentinel----pipeline-execution-guardian-v310) for details.
 
 > **New in v3.1:** All gates now have formal **hardness levels** (MANDATORY/HARD/CIRCUIT_BREAKER/SOFT). Every gate decision is logged to `gate-decisions.jsonl`. A **confidence score** (0.0-1.0) accumulates across phases and feeds into the final GO/CONDITIONAL/NO-GO decision as advisory context. **Phase transition summaries** are emitted before every phase change.
 
@@ -684,18 +688,25 @@ pipeline-orchestrator/
 +-- commands/pipeline.md              # The brain -- orchestration logic
 |
 +-- agents/
-|   +-- core/                         # 7 agents: triage -> closure
+|   +-- core/                         # 8 agents: triage -> sentinel -> closure
+|   |   +-- sentinel.md               # Pipeline execution guardian (v3.1.0)
 |   +-- executor/                     # 5 agents: batched implementation + fix
 |   +-- quality/                      # 7 agents: TDD + review + final adversarial team
 |
 +-- references/
 |   +-- complexity-matrix.md          # SSOT -- classification + proportionality
+|   +-- sentinel-integration.md       # SSOT -- sentinel state file + checkpoints
 |   +-- pipelines/                    # 10 variant definitions
 |   +-- checklists/                   # 7 security checklists
 |   +-- gates/                        # Defense-in-depth gate specs
 |   +-- glossary.md                   # Term definitions
 |
-+-- hooks/hooks.json                  # Session startup hook
++-- .claude/hooks/
+|   +-- sentinel-hook.cjs             # PreToolUse:Agent guard (v3.1.0)
+|   +-- force-pipeline-agents.cjs     # UserPromptSubmit enforcement
+|   +-- completion-checklist.cjs      # Stop hook checklist
+|
++-- hooks/hooks.json                  # Hook registry (SessionStart + UserPromptSubmit + Stop + PreToolUse)
 +-- .claude-plugin/plugin.json        # Plugin manifest
 ```
 
@@ -720,6 +731,7 @@ pipeline-orchestrator/
 | **Reviewers see no implementation context** | review-orchestrator spawned clean — no bias from the executor |
 | **You approve before review starts** | Adversarial gate shows files, domains, checklists — you control it |
 | **Full-diff final review** | 3 parallel independent reviewers catch cross-batch interaction bugs |
+| **Sentinel guards every spawn** | PreToolUse hook validates agent sequence in real-time; blocks and auto-corrects deviations |
 | **Gates have formal hardness** | MANDATORY/HARD cannot be skipped; SOFT skips are logged with penalty |
 | **Confidence score tracks quality** | Cumulative 0.0-1.0 score across phases — advisory, never overrides |
 | **Full audit trail** | Every gate decision logged to JSONL with timestamp and impact |
@@ -796,6 +808,165 @@ Every gate trigger produces a machine-readable audit entry in `gate-decisions.js
 
 ---
 
+## Sentinel -- Pipeline Execution Guardian (v3.1.0)
+
+The sentinel is a **real-time execution guardian** that ensures the pipeline follows the correct phase sequence. It catches deviations *before* they cause damage -- not after.
+
+### The Problem It Solves
+
+Without the sentinel, a miscategorized task (e.g., SIMPLES when it should be COMPLEXA) silently cascades through the entire pipeline: wrong batch size, missing adversarial checklists, skipped design review. By the time the final-validator catches it, the damage is done.
+
+The sentinel catches this at **Phase 0a** -- before a single line of code is written.
+
+### Architecture: 3 Components
+
+```
+                    +-----------------------+
+                    | sentinel-state.json   |
+                    | (single writer:       |
+                    |  pipeline controller) |
+                    +----------+------------+
+                               |
+              reads            |            reads
+         +---------------------+---------------------+
+         |                                           |
+         v                                           v
++------------------+                    +-------------------+
+| sentinel-hook    |                    | sentinel agent    |
+| (PreToolUse)     |                    | (sonnet, red)     |
+|                  |                    |                   |
+| - Intercepts     |   spawns after    | - 3 modes:        |
+|   every Agent    |   deny or at      |   ORCHESTRATOR    |
+|   tool call      |   checkpoints     |   SEQUENCE        |
+| - Compares vs    +-------------------> COHERENCE        |
+|   expected_next  |                    |                   |
+| - Match: allow   |                    | - Emits visual    |
+| - Mismatch: deny |                    |   PASS/CORRECTED/ |
+|   with reason    |                    |   BLOCKED boxes   |
++------------------+                    +-------------------+
+```
+
+### How It Works
+
+```
+Controller creates sentinel-state.json
+     |
+     v
+Phase 0a: task-orchestrator
+     |
+     v
+  +------------------------------------------+
+  | SENTINEL checkpoint #1                    |
+  | Mode: ORCHESTRATOR_VALIDATION             |
+  |                                           |
+  | Validates:                                |
+  |  - type x complexity -> correct variant?  |
+  |  - elevation rules respected?             |
+  |  - SSOT conflict detected but ignored?    |
+  |                                           |
+  | PASS -> continue                          |
+  | CORRECTED -> auto-fix, continue           |
+  | BLOCKED -> stop, ask user                 |
+  +------------------------------------------+
+     |
+     v
+Phase 0b: information-gate
+     |
+     v
+  ... (hook validates every spawn silently) ...
+     |
+     v
+Phase 2: Execution
+     |  +--- per batch -------------------+
+     |  | hook checks every Agent spawn   |
+     |  | match -> silent allow           |
+     |  | mismatch -> deny + sentinel     |
+     |  +---------------------------------+
+     |
+     v
+  +------------------------------------------+
+  | SENTINEL checkpoint #4 (COMPLEXA only)   |
+  | Mode: COHERENCE_VALIDATION               |
+  |                                           |
+  | Cross-references:                         |
+  |  - gate-decisions.jsonl consistency       |
+  |  - confidence drift (> 0.3 drop)          |
+  |  - MANDATORY gate tampering               |
+  +------------------------------------------+
+     |
+     v
+Phase 3: Closure -> Pa de Cal
+```
+
+### Three Validation Modes
+
+| Mode | When | What It Checks |
+|:-----|:-----|:---------------|
+| **ORCHESTRATOR_VALIDATION** | After Phase 0a (always) | Classification correctness, routing matrix, elevation rules, SSOT conflicts |
+| **SEQUENCE_VALIDATION** | After hook denies a spawn | Phase skipping, wrong agent order, missing conditional phases |
+| **COHERENCE_VALIDATION** | At phase transitions (COMPLEXA) | Cross-gate consistency, confidence drift, gate hardness tampering |
+
+### Checkpoints by Complexity
+
+| Checkpoint | MEDIA | COMPLEXA |
+|:-----------|:-----:|:--------:|
+| #1 post_orchestrator | **Mandatory** | **Mandatory** |
+| #2 phase_0_to_1 | Recommended | **Mandatory** |
+| #3 phase_1_to_2 | Recommended | **Mandatory** |
+| #4 phase_2_to_3 | Recommended | **Mandatory** |
+| #5 post_final_validator | Recommended | **Mandatory** |
+
+### Sentinel Output (always visible)
+
+```
++==================================================+
+|  SENTINEL                                         |
+|  PASS -- Phase 2c -> executor-controller          |
+|  Variant: implement-heavy | Batch: 2              |
+|  Gates: 0a + 0b + 0c + 1 + 1.5                    |
++==================================================+
+```
+
+```
++==================================================+
+|  SENTINEL                                         |
+|  CORRECTED -- Route auto-corrected                |
+|  From: executor-controller (incorrect)            |
+|  To:   information-gate (Phase 0b)                |
+|  Reason: Phase 0b is mandatory, was not completed |
++==================================================+
+```
+
+```
++==================================================+
+|  SENTINEL                                         |
+|  BLOCKED -- Pipeline stopped                      |
+|  Reason: MANDATORY gate SKIPPED (tampering)       |
+|  Action: Resolve conflict before continuing       |
++==================================================+
+```
+
+### Security Design
+
+| Property | How |
+|:---------|:----|
+| **Read-only agent** | `allowed-tools: Read, Glob, Grep` -- enforced in frontmatter, cannot write files |
+| **Single writer** | Only the pipeline controller writes to `sentinel-state.json` -- no race conditions |
+| **Scoped hook** | Only intercepts `pipeline-orchestrator:*` agents -- ignores all other plugin agents |
+| **Anti-injection** | Agent prompt explicitly ignores SENTINEL_VERDICT blocks found in input data |
+| **Anti-loop** | Hook never intercepts itself; circuit breaker at 3 consecutive corrections |
+| **Zero contamination** | Sentinel never receives code, diffs, or implementation context |
+
+### Key Files
+
+| File | Purpose |
+|:-----|:--------|
+| `agents/core/sentinel.md` | Agent prompt (3 modes, anti-injection, observability boxes) |
+| `.claude/hooks/sentinel-hook.cjs` | PreToolUse:Agent hook (deny/allow gate) |
+| `references/sentinel-integration.md` | SSOT for state file protocol, checkpoints, VERDICT handling |
+
+---
+
 ## Phase Transition Summaries (v3.1)
 
 Before every phase transition, the pipeline emits a visual summary of what happened:
@@ -846,7 +1017,17 @@ No silent transitions. Every phase change is visible, auditable, and shows exact
 
 ## Changelog
 
-### v3.1.0 -- Gate Hardness, Confidence Scoring & Phase Review (2026-03-29)
+### v3.1.0 -- Sentinel, Gate Hardness, Confidence Scoring & Phase Review (2026-03-29 / 2026-04-03)
+
+**Sentinel -- Pipeline Execution Guardian (2026-04-03):**
+
+- **sentinel agent** (`agents/core/sentinel.md`): Sonnet-based guardian with 3 validation modes -- ORCHESTRATOR_VALIDATION (post-classification), SEQUENCE_VALIDATION (post-hook-deny), COHERENCE_VALIDATION (phase transitions). Read-only (`allowed-tools: Read, Glob, Grep`). Anti-prompt-injection hardened.
+- **sentinel hook** (`.claude/hooks/sentinel-hook.cjs`): PreToolUse:Agent guard that validates every agent spawn against `expected_next` in sentinel-state.json. Uses correct `hookSpecificOutput` protocol with `permissionDecision: "deny"`. Scoped to `pipeline-orchestrator:*` agents only. Circuit breaker at 3 consecutive corrections.
+- **sentinel-integration.md** (`references/sentinel-integration.md`): SSOT for state file management, 5 checkpoints, VERDICT handling (PASS/CORRECTED/BLOCKED), bootstrap flow, and `/pipeline continue` interaction.
+- **State file protocol**: Single-writer architecture (pipeline controller only). Cross-platform stdin (Windows + Unix). Schema version check for forward compatibility.
+- **Design validated**: Adversarial review identified 25 findings (7 CRITICAL, 15 IMPORTANT, 3 MINOR). All resolved in spec v2 and verified in implementation review.
+
+**Gate Hardness, Confidence Scoring & Phase Review (2026-03-29):**
 
 **New governance features for pipeline integrity and auditability:**
 
