@@ -197,6 +197,14 @@ PIPELINE_DOC_PATH = "{doc_path}/Pre-{level}-action/{YYYY-MM-DD}-{short-summary}/
 
 Pass this EXACT path to ALL agents. Every agent saves to `{PIPELINE_DOC_PATH}/0N-agentname.md`.
 
+### Sentinel State File
+
+Immediately after creating PIPELINE_DOC_PATH, create the sentinel state file:
+
+1. Write `{PIPELINE_DOC_PATH}/sentinel-state.json` with initial state (see `references/sentinel-integration.md` Section 1)
+2. Set `expected_next: "task-orchestrator"` so the hook knows the first expected spawn
+3. The Write MUST complete before any Agent tool call
+
 ---
 
 ## STEP 4: EXECUTE PHASES
@@ -232,6 +240,15 @@ Spawn `task-orchestrator` agent (model: sonnet).
 - ssot_status: OK | CONFLICT
 
 **BLOCK:** SSOT conflict → STOP entire pipeline, report to user.
+
+### Sentinel Checkpoint #1 (MANDATORY)
+
+After receiving ORCHESTRATOR_DECISION:
+1. Update sentinel-state.json with the full orchestrator_decision
+2. Set expected_next based on classification (information-gate for non-DIRETO, or exit for DIRETO)
+3. Spawn Agent(pipeline-orchestrator:core:sentinel) with mode ORCHESTRATOR_VALIDATION
+4. Handle SENTINEL_VERDICT per `references/sentinel-integration.md` Section 3
+5. Only proceed to Phase 0b after sentinel returns PASS or CORRECTED
 
 #### Phase 0b: Information Gate (Macro-Gate)
 
@@ -955,3 +972,6 @@ Every agent saves their phase file to PIPELINE_DOC_PATH:
 20. **Confidence score** — accumulate and pass to final-validator. Advisory, not decisive — it supplements PASS/FAIL checks
 21. **Stale context gate** — `/pipeline continue` with >24h gap triggers STALE_CONTEXT (SOFT). User decides to re-validate or proceed
 22. **Phase rollback** — Phase 2 systemic failure can rollback to Phase 1.5. Final adversarial critical findings can trigger a Phase 2 fix batch
+23. **Sentinel state file** — Create `{PIPELINE_DOC_PATH}/sentinel-state.json` at the start of Phase 0 (BEFORE spawning task-orchestrator). Update it via Write tool BEFORE every Agent spawn. See `references/sentinel-integration.md` for full protocol.
+24. **Sentinel checkpoints** — Spawn `pipeline-orchestrator:core:sentinel` at the 5 mandatory checkpoints defined in `references/sentinel-integration.md`. Handle SENTINEL_VERDICT (PASS/CORRECTED/BLOCKED) per Section 3 of that reference.
+25. **Sentinel hook** — The PreToolUse:Agent hook (`sentinel-hook.cjs`) automatically validates every Agent spawn against `expected_next` in the state file. On divergence, it denies the call and instructs Claude to spawn sentinel for diagnosis. Follow the SEQUENCE_VALIDATION flow in `references/sentinel-integration.md` Section 4.
