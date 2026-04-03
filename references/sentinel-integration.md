@@ -123,7 +123,7 @@ After EVERY sentinel spawn, the controller reads the SENTINEL_VERDICT and acts:
 
 ### PASS
 
-1. Append to `sentinel_log` in state file: `{ timestamp, mode, status: "PASS", checks: N }`
+1. Append to `sentinel_log` in state file: `{ timestamp, mode, status: "PASS", checks: N }`. Cap at 20 entries (rolling window — remove oldest if length > 20).
 2. Reset `consecutive_corrections` to 0
 3. Proceed to next phase/agent normally
 
@@ -188,7 +188,14 @@ If state file does NOT exist when hook fires:
 ## 6. `/pipeline continue` — Resume Flow
 
 1. Controller checks if sentinel-state.json exists in PIPELINE_DOC_PATH:
-   - **Exists + pipeline_id matches:** Restore state. Apply STALE_CONTEXT gate if >24h.
+   - **Exists + pipeline_id matches:** Restore state.
    - **Exists + pipeline_id mismatch:** Create fresh state file.
    - **Does not exist:** Create fresh state file.
-2. Spawn sentinel with COHERENCE_VALIDATION before resuming execution.
+2. Apply STALE_CONTEXT gate (if state restored and last_updated > 24h ago):
+   - Present options: re-validate from Phase 0 OR proceed with warning.
+   - If user chooses re-validate → restart from Phase 0 with fresh state.
+   - If user chooses proceed → continue to step 3.
+3. Spawn sentinel with COHERENCE_VALIDATION before resuming execution.
+   - Sentinel validates: completed_phases are consistent, gate_summary is coherent, no MANDATORY gates SKIPPED.
+4. If sentinel PASS → resume pipeline from last incomplete phase.
+5. If sentinel BLOCKED → present block reason, user decides (resolve / cancel).

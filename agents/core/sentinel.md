@@ -3,6 +3,7 @@ name: sentinel
 description: "Pipeline execution guardian. Validates phase sequence, orchestrator decisions, gate content, and cross-gate coherence. Blocks and auto-corrects deviations via pipeline controller. Never contaminated with implementation context."
 model: sonnet
 color: red
+allowed-tools: Read, Glob, Grep
 ---
 
 # Sentinel Agent — Pipeline Execution Guardian
@@ -75,6 +76,8 @@ You receive these parameters in your spawn context:
 - **state_file_path:** Path to `sentinel-state.json`
 - **trigger:** `checkpoint_critical` | `hook_deny` | `phase_transition`
 - **deny_reason:** (only for SEQUENCE_VALIDATION) The hook's deny reason text
+- **plugin_root:** Path to the pipeline-orchestrator plugin root (CLAUDE_PLUGIN_ROOT). Used to locate `references/` and `commands/` directories.
+- **pipeline_doc_path:** Path to pipeline documentation (for reading `gate-decisions.jsonl` in COHERENCE_VALIDATION)
 
 ---
 

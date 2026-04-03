@@ -28,11 +28,15 @@ function handleInput(raw) {
 
   // 2. Extract agent identity from tool_input
   const toolInput = input.tool_input || {};
-  const fullAgentType = toolInput.subagent_type || toolInput.description || '';
+  const fullAgentType = toolInput.subagent_type || '';
+
+  // Only validate pipeline-orchestrator agents — allow all others
+  if (!fullAgentType || !fullAgentType.startsWith('pipeline-orchestrator:')) {
+    return process.exit(0); // not a pipeline agent, don't interfere
+  }
+
   // "pipeline-orchestrator:core:sentinel" → "sentinel"
-  const agentName = fullAgentType.includes(':')
-    ? fullAgentType.split(':').pop()
-    : fullAgentType.toLowerCase().replace(/[^a-z0-9-]/g, '');
+  const agentName = fullAgentType.split(':').pop();
 
   // 3. Discover state file path
   //    PIPELINE_DOC_PATH is set by the pipeline controller as an env var
