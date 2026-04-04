@@ -146,26 +146,19 @@ function handleInput(raw) {
     return process.exit(0);
   }
 
-  // 9. Stale state warning (passive — never blocks)
+  // 9. Stale state detection (collected, NOT early-return — divergence check must ALWAYS run)
   const STALE_THRESHOLD_MS = 60_000; // 60 seconds
   const lastUpdated = state.last_updated ? new Date(state.last_updated).getTime() : 0;
   const elapsed = Date.now() - lastUpdated;
+  let staleWarning = null;
 
   if (lastUpdated > 0 && elapsed > STALE_THRESHOLD_MS) {
     const elapsedSec = Math.round(elapsed / 1000);
-    const output = {
-      hookSpecificOutput: {
-        hookEventName: 'PreToolUse',
-        permissionDecision: 'allow',
-        additionalContext:
-          `SENTINEL WARNING: State file is ${elapsedSec}s old (threshold: 60s). ` +
-          `The controller may have forgotten to update sentinel-state.json before this spawn. ` +
-          `expected_next="${state.expected_next || '?'}" may be stale. ` +
-          `Verify that you updated the state file via Write tool BEFORE this Agent call.`
-      }
-    };
-    console.log(JSON.stringify(output));
-    return process.exit(0); // allow with warning
+    staleWarning =
+      `SENTINEL WARNING: State file is ${elapsedSec}s old (threshold: 60s). ` +
+      `The controller may have forgotten to update sentinel-state.json before this spawn. ` +
+      `expected_next="${state.expected_next || '?'}" may be stale. ` +
+      `Verify that you updated the state file via Write tool BEFORE this Agent call.`;
   }
 
   // 10. Circuit breaker: 3+ consecutive corrections
@@ -179,12 +172,22 @@ function handleInput(raw) {
     return process.exit(2); // hard block — stderr fed to Claude
   }
 
-  // 11. Compare target vs expected_next
+  // 11. Compare target vs expected_next (ALWAYS runs, even if stale)
   const expected = (state.expected_next || '').toLowerCase();
   const target = agentName.toLowerCase();
 
   if (target === expected) {
-    // MATCH → silent allow
+    // MATCH → allow (with stale warning if applicable)
+    if (staleWarning) {
+      const output = {
+        hookSpecificOutput: {
+          hookEventName: 'PreToolUse',
+          permissionDecision: 'allow',
+          additionalContext: staleWarning
+        }
+      };
+      console.log(JSON.stringify(output));
+    }
     return process.exit(0);
   }
 
