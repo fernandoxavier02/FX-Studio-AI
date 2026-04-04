@@ -19,12 +19,5 @@
     "classification",
     "sentinel",
     "open-source"
-  ],
-  "agents": [
-    {
-      "name": "pipeline-orchestrator:core:sentinel",
-      "description": "Pipeline execution guardian. Validates phase sequence, orchestrator decisions, gate content, and cross-gate coherence. Blocks and auto-corrects deviations via pipeline controller. Never contaminated with implementation context.",
-      "path": "agents/core/sentinel.md"
-    }
   ]
 }
