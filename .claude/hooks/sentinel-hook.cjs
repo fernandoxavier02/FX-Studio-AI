@@ -7,14 +7,71 @@
  * Protocol:
  *   - Exit 0 with no stdout → allow (silent pass)
  *   - Exit 0 with hookSpecificOutput deny → deny this tool call, reason fed to Claude
+ *   - Exit 0 with hookSpecificOutput allow + additionalContext → allow with warning
  *   - Exit 2 with stderr → hard block, stderr fed to Claude
  *
- * Reads sentinel-state.json from PIPELINE_DOC_PATH.
+ * Auto-discovers sentinel-state.json from .pipeline/docs/Pre-*-action/.
+ * Falls back to PIPELINE_DOC_PATH env var if set.
  * NEVER spawns agents, writes files, or emits visual output.
  */
 
 const fs = require('fs');
 const path = require('path');
+
+// ── Auto-Discovery ──────────────────────────────────────────────────────────
+
+/**
+ * Find the most recent sentinel-state.json without depending on env vars.
+ * Priority 1: PIPELINE_DOC_PATH env var (backwards compatible override)
+ * Priority 2: Scan .pipeline/docs/Pre-*-action/*/sentinel-state.json by mtime
+ * Returns: absolute path to sentinel-state.json, or null if not found.
+ */
+function discoverStatePath() {
+  // Priority 1: explicit env var (backwards compatible)
+  const envPath = (process.env.PIPELINE_DOC_PATH || '').trim();
+  if (envPath) {
+    const candidate = path.join(envPath, 'sentinel-state.json');
+    try {
+      if (fs.existsSync(candidate)) return candidate;
+    } catch { /* ignore */ }
+  }
+
+  // Priority 2: auto-discovery from .pipeline/docs/
+  const baseDir = path.join(process.cwd(), '.pipeline', 'docs');
+  try {
+    if (!fs.existsSync(baseDir)) return null;
+  } catch {
+    return null;
+  }
+
+  let newest = null;
+  let newestMtime = 0;
+
+  try {
+    for (const level of fs.readdirSync(baseDir)) {
+      const levelDir = path.join(baseDir, level);
+      if (!level.startsWith('Pre-')) continue;
+      try {
+        if (!fs.statSync(levelDir).isDirectory()) continue;
+      } catch { continue; }
+
+      for (const session of fs.readdirSync(levelDir)) {
+        const candidate = path.join(levelDir, session, 'sentinel-state.json');
+        try {
+          const stat = fs.statSync(candidate);
+          if (stat.mtimeMs > newestMtime) {
+            newestMtime = stat.mtimeMs;
+            newest = candidate;
+          }
+        } catch { /* not found, skip */ }
+      }
+    }
+  } catch { /* baseDir read error, return null */ }
+
+  return newest;
+}
+
+// ── Main Handler ────────────────────────────────────────────────────────────
 
 function handleInput(raw) {
   // 1. Parse stdin (tool_input from Claude Code)
@@ -38,40 +95,82 @@ function handleInput(raw) {
   // "pipeline-orchestrator:core:sentinel" → "sentinel"
   const agentName = fullAgentType.split(':').pop();
 
-  // 3. Discover state file path
-  //    PIPELINE_DOC_PATH is set by the pipeline controller as an env var
-  //    or we try to find it from the most recent Pre-*-action folder
-  const docPath = process.env.PIPELINE_DOC_PATH || '';
-  const stateFilePath = docPath
-    ? path.join(docPath, 'sentinel-state.json')
-    : '';
-
-  // 4. Try to read state file
-  let state;
-  if (!stateFilePath) return process.exit(0); // no doc path → allow (bootstrap)
-  try {
-    state = JSON.parse(fs.readFileSync(stateFilePath, 'utf8'));
-  } catch {
-    // State file doesn't exist or corrupted → fail-open (bootstrap or recovery)
-    return process.exit(0);
-  }
-
-  // 5. Schema version check
-  if (state.schema_version !== 1) {
-    return process.exit(0); // incompatible version → don't interfere
-  }
-
-  // 6. Pipeline inactive? → silent pass
-  if (!state.pipeline_active) {
-    return process.exit(0);
-  }
-
-  // 7. Target is sentinel itself? → pass (anti-loop)
+  // 3. Anti-loop: sentinel itself always passes
   if (agentName === 'sentinel') {
     return process.exit(0);
   }
 
-  // 8. Circuit breaker: 3+ consecutive corrections
+  // 4. Discover state file (auto-discovery + env var fallback)
+  const stateFilePath = discoverStatePath();
+
+  // 5. No state file found — hybrid fail
+  if (!stateFilePath) {
+    // Bootstrap whitelist: these agents can run before state file exists
+    const BOOTSTRAP_AGENTS = ['task-orchestrator'];
+
+    if (BOOTSTRAP_AGENTS.includes(agentName)) {
+      return process.exit(0); // fail-open: bootstrap permitted
+    }
+
+    // Fail-closed: any other pipeline-orchestrator agent without state file
+    const output = {
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'deny',
+        permissionDecisionReason:
+          'SENTINEL: No sentinel-state.json found.\n' +
+          `Agent "${agentName}" requires an active pipeline with state tracking.\n\n` +
+          'ACTION REQUIRED: Create sentinel-state.json before spawning pipeline agents.\n' +
+          'If this is a new pipeline, spawn task-orchestrator first (it bootstraps the state file).\n' +
+          'If resuming, use /pipeline continue to restore state.'
+      }
+    };
+    console.log(JSON.stringify(output));
+    return process.exit(0);
+  }
+
+  // 6. Read and parse state file
+  let state;
+  try {
+    state = JSON.parse(fs.readFileSync(stateFilePath, 'utf8'));
+  } catch {
+    // State file corrupted → fail-open (recovery scenario)
+    return process.exit(0);
+  }
+
+  // 7. Schema version check
+  if (state.schema_version !== 1) {
+    return process.exit(0); // incompatible version → don't interfere
+  }
+
+  // 8. Pipeline inactive? → silent pass
+  if (!state.pipeline_active) {
+    return process.exit(0);
+  }
+
+  // 9. Stale state warning (passive — never blocks)
+  const STALE_THRESHOLD_MS = 60_000; // 60 seconds
+  const lastUpdated = state.last_updated ? new Date(state.last_updated).getTime() : 0;
+  const elapsed = Date.now() - lastUpdated;
+
+  if (lastUpdated > 0 && elapsed > STALE_THRESHOLD_MS) {
+    const elapsedSec = Math.round(elapsed / 1000);
+    const output = {
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'allow',
+        additionalContext:
+          `SENTINEL WARNING: State file is ${elapsedSec}s old (threshold: 60s). ` +
+          `The controller may have forgotten to update sentinel-state.json before this spawn. ` +
+          `expected_next="${state.expected_next || '?'}" may be stale. ` +
+          `Verify that you updated the state file via Write tool BEFORE this Agent call.`
+      }
+    };
+    console.log(JSON.stringify(output));
+    return process.exit(0); // allow with warning
+  }
+
+  // 10. Circuit breaker: 3+ consecutive corrections
   if ((state.consecutive_corrections || 0) >= 3) {
     process.stderr.write(
       'SENTINEL CIRCUIT_BREAKER: 3 consecutive corrections without PASS. ' +
@@ -82,7 +181,7 @@ function handleInput(raw) {
     return process.exit(2); // hard block — stderr fed to Claude
   }
 
-  // 9. Compare target vs expected_next
+  // 11. Compare target vs expected_next
   const expected = (state.expected_next || '').toLowerCase();
   const target = agentName.toLowerCase();
 
@@ -91,14 +190,12 @@ function handleInput(raw) {
     return process.exit(0);
   }
 
-  // 10. Check if this is a known alias or partial match
-  //     e.g., expected "executor-controller" matches "executor-controller"
-  //     but also "pipeline-orchestrator:executor:executor-controller" should match
+  // 12. Check if this is a known alias or partial match
   if (expected && fullAgentType.toLowerCase().endsWith(expected)) {
     return process.exit(0); // suffix match → allow
   }
 
-  // 11. DIVERGENCE — deny with reason
+  // 13. DIVERGENCE — deny with reason
   const output = {
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',

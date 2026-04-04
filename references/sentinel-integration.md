@@ -94,14 +94,14 @@ Validate the orchestrator decision.
 Plugin root: {CLAUDE_PLUGIN_ROOT} (for reading references/complexity-matrix.md)
 ```
 
-### Checkpoints #2-5: Phase transitions (MANDATORY for COMPLEXA, recommended for MEDIA)
+### Checkpoints #2-5: Phase transitions
 
-| # | Checkpoint | When | Mode |
-|---|-----------|------|------|
-| 2 | phase_0_to_1 | After Phase 0 complete, before Phase 1 | COHERENCE_VALIDATION |
-| 3 | phase_1_to_2 | After Phase 1/1.5 complete, before Phase 2 | COHERENCE_VALIDATION |
-| 4 | phase_2_to_3 | After last batch + reviews, before Phase 3 | COHERENCE_VALIDATION |
-| 5 | post_final_validator | After Pa de Cal returns | COHERENCE_VALIDATION |
+| # | Checkpoint | When | Mode | Required |
+|---|-----------|------|------|----------|
+| 2 | phase_0_to_1 | After Phase 0 complete, before Phase 1 | COHERENCE_VALIDATION | COMPLEXA mandatory, MEDIA recommended |
+| 3 | phase_1_to_2 | After Phase 1/1.5 complete, before Phase 2 | COHERENCE_VALIDATION | COMPLEXA mandatory, MEDIA recommended |
+| 4 | phase_2_to_3 | After last batch + reviews, before Phase 3 | COHERENCE_VALIDATION | **Mandatory ALL** |
+| 5 | post_final_validator | After Pa de Cal returns | COHERENCE_VALIDATION | COMPLEXA mandatory, MEDIA recommended |
 
 **Prompt template for coherence checkpoints:**
 
@@ -180,8 +180,13 @@ On the FIRST `/pipeline [task]` invocation:
 4. Normal flow continues
 
 If state file does NOT exist when hook fires:
-- Hook does fail-open (exit 0) — allows the spawn
-- Controller will create the state file in the next step
+- Hook uses **hybrid fail** behavior:
+  - `task-orchestrator` → fail-open (bootstrap agent, allowed without state file)
+  - All other `pipeline-orchestrator:*` agents → **fail-closed** (denied with actionable message)
+- Controller creates the state file after task-orchestrator returns
+
+**Auto-discovery:** The hook scans `.pipeline/docs/Pre-*-action/*/sentinel-state.json` automatically
+(newest by mtime). The `PIPELINE_DOC_PATH` env var is an optional override, not a requirement.
 
 ---
 

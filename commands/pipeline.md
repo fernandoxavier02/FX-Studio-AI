@@ -553,6 +553,27 @@ If `action_required: FIX_NEEDED`:
 +==================================================================+
 ```
 
+#### Step 2f: Sentinel Checkpoint — phase_2_to_3 (MANDATORY ALL complexities)
+
+Before entering Phase 3, the controller MUST run a sentinel coherence validation.
+This checkpoint is mandatory for ALL complexity levels (SIMPLES, MEDIA, COMPLEXA).
+
+1. Update sentinel-state.json: set `current_phase: "2→3"`, `expected_next: "sanity-checker"`
+2. Spawn `pipeline-orchestrator:core:sentinel` with mode COHERENCE_VALIDATION:
+   ```
+   Validate phase transition coherence.
+   - mode: COHERENCE_VALIDATION
+   - state_file_path: {PIPELINE_DOC_PATH}/sentinel-state.json
+   - trigger: phase_transition
+   - transition: phase_2_to_3
+   Plugin root: {CLAUDE_PLUGIN_ROOT}
+   Pipeline doc path: {PIPELINE_DOC_PATH} (for reading gate-decisions.jsonl)
+   ```
+3. Handle SENTINEL_VERDICT per `references/sentinel-integration.md` Section 3:
+   - **PASS** → proceed to Step 3a (sanity-checker)
+   - **CORRECTED** → apply correction, then proceed
+   - **BLOCKED** → present block reason to user, await resolution
+
 #### Step 3a: Sanity Checker
 
 Spawn `sanity-checker` (model: haiku).
