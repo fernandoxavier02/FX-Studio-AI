@@ -23,7 +23,7 @@
       "description": "Intelligent toolchain orchestrator for Claude Code — recommends skills, plugins, MCPs, and agents for any task with dependency-aware ordering",
       "version": "0.1.0",
       "author": {
-        "name": "fernandoxavier02",
+        "name": "FX Studio AI",
         "url": "https://github.com/fernandoxavier02/skill-advisor"
       },
       "source": {
@@ -37,7 +37,7 @@
       "description": "Claude Code Swiss Army Knife — diagnose, configure, and build your Claude Code environment. Meta-skill /cc with triage menu + 9 specialized skills for context audit, MCP, hooks, agents, prompts, security, setup, and skill building.",
       "version": "1.0.0",
       "author": {
-        "name": "fernandobt",
+        "name": "FX Studio AI",
         "url": "https://github.com/fernandoxavier02/cc-mastery"
       },
       "source": {
