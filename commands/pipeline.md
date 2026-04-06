@@ -413,7 +413,7 @@ Read `references/pipelines/{variant}.md` to get:
 - Step-by-step flow
 - Success criteria
 
-#### Step 2b: TDD Phase (if pipeline includes TDD steps)
+#### Step 2b: TDD Phase (MANDATORY for Bug Fix, Feature, and User Story pipelines — skip ONLY for Audit and UX Simulation)
 
 **Quality Gate Router** (model: sonnet):
 - Generate test scenarios in PLAIN LANGUAGE
@@ -972,7 +972,7 @@ Every agent saves their phase file to PIPELINE_DOC_PATH:
 ## CRITICAL REMINDERS
 
 1. **Single PIPELINE_DOC_PATH** — create once, pass to ALL agents
-2. **TDD is mandatory** — quality-gate-router + pre-tester are NOT optional
+2. **TDD is mandatory for code-changing pipelines** — quality-gate-router + pre-tester are NOT optional for Bug Fix, Feature, and User Story types. Only Audit and UX Simulation (report-only) skip TDD
 3. **User approval required** — pipeline BLOCKS until tests approved
 4. **Progress blocks** — emit BEFORE every phase
 5. **Automatic batching** — batch size is determined by complexity, not user preference

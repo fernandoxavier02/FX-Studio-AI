@@ -147,7 +147,7 @@ function handleInput(raw) {
   }
 
   // 9. Stale state detection (collected, NOT early-return — divergence check must ALWAYS run)
-  const STALE_THRESHOLD_MS = 60_000; // 60 seconds
+  const STALE_THRESHOLD_MS = 300_000; // 300 seconds (5 minutes) — opus agents can take >60s per spawn
   const lastUpdated = state.last_updated ? new Date(state.last_updated).getTime() : 0;
   const elapsed = Date.now() - lastUpdated;
   let staleWarning = null;

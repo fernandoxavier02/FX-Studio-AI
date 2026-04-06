@@ -8,13 +8,26 @@
 
 ## Team Composition
 
-| Step | Agent | Responsibility |
-|------|-------|---------------|
-| 1 | task-orchestrator | Classify as Audit + MEDIA |
-| 2 | information-gate | Verify: scope, axes of analysis, stakeholder |
-| 3 | executor-controller | Dispatch analysis tasks (READ-ONLY) |
-| 4 | sanity-checker | Verify report completeness |
-| 5 | final-validator | Report quality assessment |
+| Step | Agent | Phase | Responsibility |
+|------|-------|-------|---------------|
+| 1 | task-orchestrator | 0a | Classify as Audit + MEDIA |
+| 2 | sentinel (ORCHESTRATOR_VALIDATION) | 0 | Validate classification correctness |
+| 3 | information-gate | 0b | Verify: scope, axes of analysis, stakeholder |
+| 4 | executor-controller | 2 | Dispatch analysis tasks (READ-ONLY) |
+| 5 | sentinel (phase_2_to_3) | 2→3 | Validate phase transition coherence |
+| 6 | sanity-checker | 3 | Verify report completeness |
+| 7 | final-adversarial-orchestrator | 3 | Independent final review (recommended, opt-in) |
+| 8 | final-validator (Pa de Cal) | 3 | Report quality assessment |
+| 9 | finishing-branch | 3 | Present closeout options |
+
+**Note:** Audit pipelines produce REPORTS ONLY — no TDD (quality-gate-router/pre-tester not applicable).
+
+### Pipeline Discipline (MANDATORY)
+
+- **Sentinel checkpoints:** #1 (post_orchestrator) and #4 (phase_2_to_3) are MANDATORY. #2, #3, #5 are recommended.
+- **Phase transitions:** Emit Phase Transition Summary block BEFORE every phase change.
+- **Gate decisions:** Log EVERY gate trigger to `{PIPELINE_DOC_PATH}/gate-decisions.jsonl`.
+- **State file:** Update `sentinel-state.json` via Write tool BEFORE every Agent spawn.
 
 ## Step-by-Step Flow
 

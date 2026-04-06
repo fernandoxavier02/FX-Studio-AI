@@ -8,13 +8,26 @@
 
 ## Team Composition
 
-| Step | Agent | Responsibility |
-|------|-------|---------------|
-| 1 | task-orchestrator | Classify as UX Simulation + MEDIA |
-| 2 | information-gate | Verify: target journey, devices, accessibility requirements |
-| 3 | executor-controller | Execute journey simulations |
-| 4 | sanity-checker | Verify report completeness |
-| 5 | final-validator | UX assessment decision |
+| Step | Agent | Phase | Responsibility |
+|------|-------|-------|---------------|
+| 1 | task-orchestrator | 0a | Classify as UX Simulation + MEDIA |
+| 2 | sentinel (ORCHESTRATOR_VALIDATION) | 0 | Validate classification correctness |
+| 3 | information-gate | 0b | Verify: target journey, devices, accessibility requirements |
+| 4 | executor-controller | 2 | Execute journey simulations |
+| 5 | sentinel (phase_2_to_3) | 2→3 | Validate phase transition coherence |
+| 6 | sanity-checker | 3 | Verify report completeness |
+| 7 | final-adversarial-orchestrator | 3 | Independent final review (recommended, opt-in) |
+| 8 | final-validator (Pa de Cal) | 3 | UX assessment decision |
+| 9 | finishing-branch | 3 | Present closeout options |
+
+**Note:** UX Simulation pipelines produce REPORTS ONLY — no TDD (quality-gate-router/pre-tester not applicable).
+
+### Pipeline Discipline (MANDATORY)
+
+- **Sentinel checkpoints:** #1 (post_orchestrator) and #4 (phase_2_to_3) are MANDATORY. #2, #3, #5 are recommended.
+- **Phase transitions:** Emit Phase Transition Summary block BEFORE every phase change.
+- **Gate decisions:** Log EVERY gate trigger to `{PIPELINE_DOC_PATH}/gate-decisions.jsonl`.
+- **State file:** Update `sentinel-state.json` via Write tool BEFORE every Agent spawn.
 
 ## Step-by-Step Flow
 
