@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "FX-studio-AI",
-  "description": "FX Studio AI — plugins for Claude Code",
+  "name": "FX-Studio-AI",
+  "description": "FX Studio AI — Plugin Marketplace for Claude Code",
   "owner": {
     "name": "FX Studio AI",
     "email": "noreply@fxstudio.ai"
@@ -38,7 +38,7 @@
       "version": "1.0.0",
       "author": {
         "name": "fernandobt",
-        "url": "https://github.com/fernandoxavier02/cc-toolkit"
+        "url": "https://github.com/fernandoxavier02/cc-mastery"
       },
       "source": {
         "source": "url",
