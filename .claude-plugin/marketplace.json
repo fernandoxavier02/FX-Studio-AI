@@ -19,10 +19,7 @@
       "name": "skill-advisor",
       "version": "0.2.0",
       "description": "Intelligent toolchain orchestrator for Claude Code - recommends skills, plugins, MCPs, and agents for any task with dependency-aware ordering",
-      "source": {
-        "source": "url",
-        "url": "https://github.com/fernandoxavier02/skill-advisor.git"
-      },
+      "source": "./plugins/skill-advisor",
       "category": "development",
       "homepage": "https://github.com/fernandoxavier02/skill-advisor"
     },
