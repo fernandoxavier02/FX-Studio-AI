@@ -1,6 +1,6 @@
 {
   "name": "pipeline-orchestrator",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "Single-command multi-agent pipeline for Claude Code. Auto-classifies tasks, executes in adaptive batches with TDD, context-independent adversarial review, final adversarial team, and proportional validation. Works with any project.",
   "author": {
     "name": "FX Studio AI",

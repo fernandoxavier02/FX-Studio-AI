@@ -9,6 +9,7 @@
   "plugins": [
     {
       "name": "pipeline-orchestrator",
+      "version": "3.2.0",
       "description": "Single-command multi-agent pipeline for Claude Code. Auto-classifies tasks, executes in adaptive batches with adversarial review, defense-in-depth gates, and proportional validation.",
       "source": "./plugins/pipeline-orchestrator",
       "category": "development",
