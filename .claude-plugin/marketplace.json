@@ -32,6 +32,21 @@
       },
       "category": "development",
       "homepage": "https://github.com/fernandoxavier02/cc-mastery"
+    },
+    {
+      "name": "html-artifacts",
+      "description": "Generate self-contained HTML artifacts when output is too dense for markdown chat. v1.0.0 (2026-05-11): initial public release with 17 Thariq Shihipar templates (exploration, code review, design system, status, incident, flowchart, explainer, plan, PR writeup, triage, config editor, prompt tuner) + 4 trading-domain renderers (backtest-comparison, risk-dashboard, signal-audit, market-regime) + 3 spec renderers (Kiro requirements/design/tasks, auto-detected). Unified ArtifactEngine API with pydantic schemas. PostToolUse hook (portable via process.cwd + CLAUDE_PLUGIN_ROOT) regenerates companion HTML for edits in skills/rules/CLAUDE.md/knowledge_base/.kiro/specs. /gen-html slash command with 5 category flags. Interactive validation artifacts with clipboard response channel (=== ARTIFACT RESPONSE === block). Test suite: 10 files. MIT license + third-party attribution to Thariq (Anthropic Claude Code team).",
+      "version": "1.0.0",
+      "author": {
+        "name": "FX Studio AI",
+        "url": "https://github.com/fernandoxavier02/html-artifacts"
+      },
+      "source": {
+        "source": "url",
+        "url": "https://github.com/fernandoxavier02/html-artifacts.git",
+        "ref": "v1.0.0"
+      },
+      "category": "development"
     }
   ]
 }
